@@ -11,6 +11,13 @@ wheels/
 
 # Environment variables
 .env
+.env.local
+.env.*.local
+
+# Secrets
+*.pem
+*.key
+secrets/
 
 # macOS
 .DS_Store

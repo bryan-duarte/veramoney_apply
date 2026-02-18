@@ -187,12 +187,66 @@ if is_user_under_age:
 
 -   **When to use Zod:** validate untrusted inputs (HTTP requests, webhooks, database rows, environment variables) and perform transformations/sanitization before the data enters the application layer. Keep these schemas in the infrastructure layer so upper layers consume only trusted entities.
 
--   **Clean architecture flow:** External source â†’ _Zod parses & transforms (runtime guard)_ â†’ `z.infer` creates the TypeScript type â†’ Application/Domain/UI layers operate purely on the trusted type.
+-   **Clean architecture flow:** External source â†' _Zod parses & transforms (runtime guard)_ â†' `z.infer` creates the TypeScript type â†' Application/Domain/UI layers operate purely on the trusted type.
 
 **To-Do Checklist:**
 - [ ] Add Zod schemas to all entry points where data crosses trust boundaries.
 - [ ] Derive TypeScript types from Zod schemas.
 - [ ] Remove manual runtime checks once Zod validation is in place.
+
+---
+
+### 10. KISS & YAGNI: Avoid Unnecessary Complexity (MANDATORY)
+
+**Objective:** Write the simplest code that solves the problem. Complexity is a liability, not an asset.
+
+**Core Principles:**
+
+1.  **KISS (Keep It Simple, Stupid):** Always choose the simplest solution that meets requirements. Simple code is easier to understand, maintain, debug, and extend.
+
+2.  **YAGNI (You Aren't Gonna Need It):** Do not implement features, abstractions, or flexibility that are not currently required. Build for today's requirements, not hypothetical future ones.
+
+3.  **Explicit User Requirement Override:** The only time to introduce complexity is when the user explicitly requests it or the problem domain fundamentally requires it. When in doubt, ask.
+
+4.  **Occam's Razor for Code:** When multiple valid solutions exist, prefer the one with the fewest assumptions, moving parts, and lines of code.
+
+**Decision Framework:**
+
+When faced with implementation choices, apply this hierarchy:
+-   **First:** Can this be done with standard library or existing code? → **Do that.**
+-   **Second:** Does a simple, direct solution exist? → **Use it.**
+-   **Third:** Is abstraction genuinely necessary? → **Only if complexity is explicitly required.**
+-   **Never:** Build flexibility "just in case" or add layers "for future extensibility."
+
+**Red Flags (Avoid These):**
+-   Premature abstraction (creating base classes/interfaces for single implementations)
+-   Over-engineering (design patterns where a simple function would suffice)
+-   Speculative features ("we might need this later")
+-   Configuration for configuration's sake
+-   Layers of indirection without clear benefit
+
+**Python Example:**
+```python
+# AVOID: Over-engineered, speculative abstraction
+class DataProcessor(ABC):
+    @abstractmethod
+    def process(self, data: dict) -> dict:
+        pass
+
+class UserDataProcessor(DataProcessor):
+    def process(self, data: dict) -> dict:
+        return {"name": data.get("name", "").upper()}
+
+# PREFER: Simple, direct solution
+def process_user_name(user_data: dict) -> dict:
+    return {"name": user_data.get("name", "").upper()}
+```
+
+**To-Do Checklist:**
+- [ ] Before adding an abstraction, ask: "Is there a simpler way?"
+- [ ] Before adding a feature, ask: "Was this explicitly requested?"
+- [ ] Before adding a configuration option, ask: "Can this just be a constant?"
+- [ ] Review any code with more than 2 layers of abstraction—can any be removed?
 
 ---
 
