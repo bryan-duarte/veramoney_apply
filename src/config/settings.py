@@ -57,6 +57,11 @@ class Settings(BaseSettings):
         description="Langfuse server URL for observability data submission",
     )
 
+    openweather_api_key: str | None = Field(
+        default=None,
+        description="OpenWeatherMap API key for weather data retrieval",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
