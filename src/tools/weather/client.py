@@ -1,6 +1,5 @@
-import asyncio
-
 import httpx
+from tenacity import AsyncRetrying, RetryError, stop_after_attempt, wait_exponential
 
 from src.config import settings
 from src.tools.weather.schemas import (
@@ -32,25 +31,17 @@ class OpenWeatherClient:
         return self._api_key is not None and len(self._api_key) > 0
 
     async def _make_request(self, url: str, params: dict[str, str | int]) -> dict | list:
-        retry_count = 0
-        retry_delay = INITIAL_RETRY_DELAY_SECONDS
-
-        while retry_count <= MAX_RETRIES:
-            async with httpx.AsyncClient(timeout=self._timeout_seconds) as http_client:
-                try:
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(MAX_RETRIES),
+            wait=wait_exponential(multiplier=INITIAL_RETRY_DELAY_SECONDS),
+            retry=lambda exc: isinstance(exc, httpx.TimeoutException),
+            reraise=True,
+        ):
+            with attempt:
+                async with httpx.AsyncClient(timeout=self._timeout_seconds) as http_client:
                     response = await http_client.get(url, params=params, headers=self._base_headers)
                     response.raise_for_status()
                     return response.json()
-                except httpx.TimeoutException:
-                    is_last_retry = retry_count == MAX_RETRIES
-                    if is_last_retry:
-                        raise
-                    await asyncio.sleep(retry_delay)
-                    retry_count += 1
-                    retry_delay *= 2
-                except httpx.HTTPStatusError:
-                    raise
-
         raise httpx.TimeoutException("Max retries exceeded")
 
     def _build_city_query(self, city_name: str, country_code: str | None) -> str:
