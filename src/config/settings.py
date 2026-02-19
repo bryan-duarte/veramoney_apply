@@ -119,6 +119,11 @@ class Settings(BaseSettings):
         description="Maximum messages to keep in conversation context",
     )
 
+    enable_docs: bool | None = Field(
+        default=None,
+        description="Enable API documentation endpoints (Swagger UI, ReDoc, OpenAPI schema). Defaults to True in non-production environments",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -141,6 +146,13 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.app_stage == AppStage.DEVELOPMENT
+
+    @computed_field
+    @property
+    def docs_enabled(self) -> bool:
+        if self.enable_docs is not None:
+            return self.enable_docs
+        return not self.is_production
 
     @computed_field
     @property

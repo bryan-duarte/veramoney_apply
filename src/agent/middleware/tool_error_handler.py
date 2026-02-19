@@ -32,7 +32,9 @@ async def tool_error_handler(
             tool_arguments,
             str(error),
         )
-        error_message = f"I'm having trouble accessing {service_name} right now. Please try again."
+        error_message = (
+            f"I'm having trouble accessing {service_name} right now. Please try again."
+        )
         return ToolMessage(
             content=error_message,
             tool_call_id=request.tool_call["id"],

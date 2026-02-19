@@ -56,7 +56,10 @@ def _check_weather_hallucination(response_content: str, tool_result: str) -> Non
         return
 
     temperature_in_response = _find_temperature_in_text(response_content)
-    if temperature_in_response is not None and abs(temperature_in_response - temperature) > 1:
+    if (
+        temperature_in_response is not None
+        and abs(temperature_in_response - temperature) > 1
+    ):
         logger.warning(
             "potential_weather_hallucination expected_temp=%.1f found_temp=%.1f",
             temperature,
@@ -73,7 +76,10 @@ def _check_stock_hallucination(response_content: str, tool_result: str) -> None:
         return
 
     price_in_response = _find_price_in_text(response_content)
-    if price_in_response is not None and abs(price_in_response - price) > PRICE_TOLERANCE:
+    if (
+        price_in_response is not None
+        and abs(price_in_response - price) > PRICE_TOLERANCE
+    ):
         logger.warning(
             "potential_stock_hallucination expected_price=%.2f found_price=%.2f",
             price,

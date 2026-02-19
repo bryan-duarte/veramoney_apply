@@ -17,7 +17,9 @@ class MemoryStore:
 
     async def initialize(self) -> None:
         connection_uri = self._settings.postgres_memory_uri
-        logger.info(f"Initializing memory store connection to {self._settings.postgres_memory_host}")
+        logger.info(
+            f"Initializing memory store connection to {self._settings.postgres_memory_host}"
+        )
         self._checkpointer = PostgresSaver.from_conn_string(connection_uri)
         self._checkpointer.setup()
         logger.info("Memory store initialized successfully")

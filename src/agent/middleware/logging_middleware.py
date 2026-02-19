@@ -29,7 +29,11 @@ async def logging_middleware(
     duration_ms = (time.perf_counter() - start_time) * 1000
 
     tool_calls = response.message.tool_calls if response.message else []
-    content_length = len(response.message.content) if response.message and response.message.content else 0
+    content_length = (
+        len(response.message.content)
+        if response.message and response.message.content
+        else 0
+    )
 
     logger.debug(
         "agent_response session=%s content_len=%d tool_calls=%d duration=%.2fms",

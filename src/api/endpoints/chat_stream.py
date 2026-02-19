@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter
 from langchain.messages import AIMessageChunk, HumanMessage, ToolMessage
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sse_starlette import EventSourceResponse
 
 from src.agent import create_conversational_agent, get_memory_store
@@ -22,6 +22,21 @@ MESSAGE_MAX_LENGTH = 32000
 
 
 class ChatStreamRequest(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "message": "What is the current weather in Montevideo, Uruguay?",
+                    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+                },
+                {
+                    "message": "What is the stock price of Apple (AAPL) and Microsoft (MSFT)?",
+                    "session_id": "660e8400-e29b-41d4-a716-446655440001",
+                },
+            ]
+        }
+    )
+
     message: str = Field(
         ...,
         description="The user's message to the assistant",
@@ -47,13 +62,38 @@ class ChatStreamRequest(BaseModel):
     "",
     summary="Send a chat message with streaming response",
     description="Send a message to the AI assistant and receive a streaming response via Server-Sent Events. "
-    "The assistant can use weather and stock price tools to answer questions.",
+    "The assistant can use weather and stock price tools to answer questions.\n\n"
+    "**Features:**\n"
+    "- Real-time token streaming for faster perceived response\n"
+    "- Tool call events with arguments\n"
+    "- Tool result events with responses\n\n"
+    "**SSE Event Types:**\n"
+    '- `token`: Content chunk ` {"content": "..."}`\n'
+    '- `tool_call`: Tool invocation `{"tool": "...", "args": {...}}`\n'
+    '- `tool_result`: Tool response `{"tool": "...", "result": "..."}`\n'
+    "- `done`: Stream completion `{}`\n"
+    '- `error`: Error occurred `{"message": "..."}`',
+    response_description="Server-Sent Events stream with token, tool_call, tool_result, done, and error events",
     responses={
-        200: {"description": "Streaming response from the assistant (SSE)"},
-        400: {"description": "Invalid request body or missing session_id"},
-        401: {"description": "Invalid or missing API key"},
-        429: {"description": "Rate limit exceeded"},
-        500: {"description": "Internal server error"},
+        200: {
+            "description": "Streaming response from the assistant (SSE)",
+            "content": {
+                "text/event-stream": {
+                    "example": (
+                        'event: token\\ndata: {"content": "In Montevideo"}\\n\\n'
+                        'event: tool_call\\ndata: {"tool": "weather", "args": {"city_name": "Montevideo"}}\\n\\n'
+                        'event: tool_result\\ndata: {"tool": "weather", "result": "22C, partly cloudy"}\\n\\n'
+                        "event: done\\ndata: {}\\n\\n"
+                    )
+                }
+            },
+        },
+        400: {
+            "description": "Invalid request body or malformed session_id (must be UUID)"
+        },
+        401: {"description": "Invalid or missing X-API-Key header"},
+        429: {"description": "Rate limit exceeded (60 requests/minute)"},
+        500: {"description": "Internal server error during processing"},
     },
 )
 async def chat_stream(
@@ -102,10 +142,12 @@ async def _generate_stream(
                         for tool_call in token.tool_calls:
                             yield {
                                 "event": "tool_call",
-                                "data": json.dumps({
-                                    "tool": tool_call.get("name"),
-                                    "args": tool_call.get("args", {}),
-                                }),
+                                "data": json.dumps(
+                                    {
+                                        "tool": tool_call.get("name"),
+                                        "args": tool_call.get("args", {}),
+                                    }
+                                ),
                             }
             elif stream_mode == "updates":
                 for source, update in data.items():
@@ -115,10 +157,12 @@ async def _generate_stream(
                             if isinstance(msg, ToolMessage):
                                 yield {
                                     "event": "tool_result",
-                                    "data": json.dumps({
-                                        "tool": getattr(msg, "name", "unknown"),
-                                        "result": msg.content,
-                                    }),
+                                    "data": json.dumps(
+                                        {
+                                            "tool": getattr(msg, "name", "unknown"),
+                                            "result": msg.content,
+                                        }
+                                    ),
                                 }
 
         yield {"event": "done", "data": "{}"}
