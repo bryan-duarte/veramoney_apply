@@ -21,3 +21,84 @@ dependencies = [
     "tenacity>=8.0.0",
     "uvicorn[standard]>=0.41.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.1",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+indent-width = 4
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "*.egg-info",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+    "node_modules",
+]
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "C4",
+    "SIM",
+    "TCH",
+    "RUF",
+    "ASYNC",
+    "S",
+    "A",
+    "ARG",
+    "PTH",
+    "ERA",
+    "PL",
+    "PERF",
+]
+ignore = [
+    "E501",     # line-too-long (handled by formatter)
+    "S101",     # assert-used (needed for tests)
+    "S104",     # hardcoded-bind-all-interfaces (Docker needs 0.0.0.0)
+    "PLR0913",  # too-many-arguments (common in FastAPI endpoints)
+    "B008",     # function-call-in-default-argument (FastAPI Depends pattern)
+]
+fixable = ["ALL"]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG", "S101", "PLR2004"]         # test files allow unused args, asserts, magic values
+"__init__.py" = ["F401"]                       # allow unused imports in __init__.py (re-exports)
+"src/api/endpoints/*" = ["B008", "ARG001"]     # FastAPI Depends pattern and unused request/api_key args
+"src/api/app.py" = ["ARG001"]                  # lifespan app parameter required by signature
+"src/api/core/exception_handlers.py" = ["ARG001"]  # handler signatures require request/exc parameters
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-branches = 15
+max-returns = 6
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"

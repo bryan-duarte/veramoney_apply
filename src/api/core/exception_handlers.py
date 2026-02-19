@@ -4,6 +4,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
+
 logger = logging.getLogger(__name__)
 
 

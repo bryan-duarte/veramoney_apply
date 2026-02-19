@@ -16,7 +16,11 @@ async def _fetch_stock_data(ticker: str) -> StockOutput:
 
     is_positive_change = change_value >= 0
     change = f"+{change_value:.2f}" if is_positive_change else f"{change_value:.2f}"
-    change_percent = f"+{change_percent_value:.2f}%" if is_positive_change else f"{change_percent_value:.2f}%"
+    change_percent = (
+        f"+{change_percent_value:.2f}%"
+        if is_positive_change
+        else f"{change_percent_value:.2f}%"
+    )
 
     return StockOutput(
         ticker=snapshot_data["ticker"],

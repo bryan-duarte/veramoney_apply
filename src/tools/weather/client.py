@@ -1,5 +1,5 @@
 import httpx
-from tenacity import AsyncRetrying, RetryError, stop_after_attempt, wait_exponential
+from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 
 from src.config import settings
 from src.tools.weather.schemas import (
@@ -7,6 +7,7 @@ from src.tools.weather.schemas import (
     GeoLocation,
     WeatherCondition,
 )
+
 
 OPENWEATHER_GEOCODING_BASE_URL = "http://api.openweathermap.org/geo/1.0/direct"
 OPENWEATHER_ONECALL_BASE_URL = "https://api.openweathermap.org/data/3.0/onecall"
@@ -21,7 +22,11 @@ class CityNotFoundError(Exception):
 
 
 class OpenWeatherClient:
-    def __init__(self, api_key: str | None = None, timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS):
+    def __init__(
+        self,
+        api_key: str | None = None,
+        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    ):
         self._api_key = api_key or settings.openweather_api_key
         self._timeout_seconds = timeout_seconds
         self._base_headers = {"Accept": "application/json"}
@@ -30,7 +35,9 @@ class OpenWeatherClient:
     def is_configured(self) -> bool:
         return self._api_key is not None and len(self._api_key) > 0
 
-    async def _make_request(self, url: str, params: dict[str, str | int]) -> dict | list:
+    async def _make_request(
+        self, url: str, params: dict[str, str | int]
+    ) -> dict | list:
         async for attempt in AsyncRetrying(
             stop=stop_after_attempt(MAX_RETRIES),
             wait=wait_exponential(multiplier=INITIAL_RETRY_DELAY_SECONDS),
@@ -38,8 +45,12 @@ class OpenWeatherClient:
             reraise=True,
         ):
             with attempt:
-                async with httpx.AsyncClient(timeout=self._timeout_seconds) as http_client:
-                    response = await http_client.get(url, params=params, headers=self._base_headers)
+                async with httpx.AsyncClient(
+                    timeout=self._timeout_seconds
+                ) as http_client:
+                    response = await http_client.get(
+                        url, params=params, headers=self._base_headers
+                    )
                     response.raise_for_status()
                     return response.json()
         raise httpx.TimeoutException("Max retries exceeded")
@@ -50,7 +61,9 @@ class OpenWeatherClient:
             return f"{city_name},{country_code}"
         return city_name
 
-    async def geocode_city(self, city_name: str, country_code: str | None = None) -> GeoLocation:
+    async def geocode_city(
+        self, city_name: str, country_code: str | None = None
+    ) -> GeoLocation:
         if not self.is_configured:
             raise ValueError("OpenWeatherMap API key is not configured")
 
@@ -61,7 +74,9 @@ class OpenWeatherClient:
             "appid": self._api_key,
         }
 
-        response_data = await self._make_request(OPENWEATHER_GEOCODING_BASE_URL, request_params)
+        response_data = await self._make_request(
+            OPENWEATHER_GEOCODING_BASE_URL, request_params
+        )
 
         is_response_empty = not response_data or not isinstance(response_data, list)
         if is_response_empty:
@@ -75,7 +90,9 @@ class OpenWeatherClient:
             country_code=first_result.get("country", ""),
         )
 
-    async def get_current_weather(self, latitude: float, longitude: float) -> CurrentWeatherData:
+    async def get_current_weather(
+        self, latitude: float, longitude: float
+    ) -> CurrentWeatherData:
         if not self.is_configured:
             raise ValueError("OpenWeatherMap API key is not configured")
 
@@ -87,7 +104,9 @@ class OpenWeatherClient:
             "appid": self._api_key,
         }
 
-        response_data = await self._make_request(OPENWEATHER_ONECALL_BASE_URL, request_params)
+        response_data = await self._make_request(
+            OPENWEATHER_ONECALL_BASE_URL, request_params
+        )
         current_data = response_data.get("current", {})
 
         weather_conditions = [

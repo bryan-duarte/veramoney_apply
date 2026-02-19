@@ -5,15 +5,20 @@ from src.tools.weather.client import CityNotFoundError, OpenWeatherClient
 from src.tools.weather.schemas import WeatherInput, WeatherOutput
 
 
-async def _fetch_weather_data(city_name: str, country_code: str | None) -> WeatherOutput:
+async def _fetch_weather_data(
+    city_name: str, country_code: str | None
+) -> WeatherOutput:
     weather_client = OpenWeatherClient()
 
     location = await weather_client.geocode_city(city_name, country_code)
-    weather = await weather_client.get_current_weather(location.latitude, location.longitude)
+    weather = await weather_client.get_current_weather(
+        location.latitude, location.longitude
+    )
 
-    conditions_description = ", ".join(
-        condition.description for condition in weather.conditions
-    ) or "Unknown"
+    conditions_description = (
+        ", ".join(condition.description for condition in weather.conditions)
+        or "Unknown"
+    )
 
     return WeatherOutput(
         city=location.city_name,

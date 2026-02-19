@@ -2,7 +2,8 @@ from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException
 
-from src.config import settings, Settings
+from src.config import Settings, settings
+
 
 SettingsDep = Annotated[Settings, Depends(lambda: settings)]
 

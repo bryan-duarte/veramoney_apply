@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from src.api.core import APIKeyDep
 
+
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 MESSAGE_MIN_LENGTH = 1

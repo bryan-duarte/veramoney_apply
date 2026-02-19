@@ -1,9 +1,10 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 
 from src.config import settings
+
 
 ALPACA_DATA_BASE_URL = "https://data.alpaca.markets/v2"
 ALPACA_SANDBOX_BASE_URL = "https://data.sandbox.alpaca.markets/v2"
@@ -31,9 +32,13 @@ class AlpacaMarketDataClient:
     ) -> None:
         self._api_key = api_key or settings.alpaca_api_key
         self._secret_key = secret_key or settings.alpaca_secret_key
-        self._use_sandbox = use_sandbox if use_sandbox is not None else settings.alpaca_use_sandbox
+        self._use_sandbox = (
+            use_sandbox if use_sandbox is not None else settings.alpaca_use_sandbox
+        )
         self._timeout_seconds = timeout_seconds
-        self._base_url = ALPACA_SANDBOX_BASE_URL if self._use_sandbox else ALPACA_DATA_BASE_URL
+        self._base_url = (
+            ALPACA_SANDBOX_BASE_URL if self._use_sandbox else ALPACA_DATA_BASE_URL
+        )
         self._headers = {
             "APCA-API-KEY-ID": self._api_key or "",
             "APCA-API-SECRET-KEY": self._secret_key or "",
@@ -56,8 +61,12 @@ class AlpacaMarketDataClient:
             reraise=True,
         ):
             with attempt:
-                async with httpx.AsyncClient(timeout=self._timeout_seconds) as http_client:
-                    response = await http_client.get(url, params=params, headers=self._headers)
+                async with httpx.AsyncClient(
+                    timeout=self._timeout_seconds
+                ) as http_client:
+                    response = await http_client.get(
+                        url, params=params, headers=self._headers
+                    )
                     response.raise_for_status()
                     return response.json()
         raise httpx.TimeoutException("Max retries exceeded")
@@ -77,22 +86,25 @@ class AlpacaMarketDataClient:
 
         ticker_data = response_data[normalized_ticker]
         is_missing_trade_data = (
-            "latestTrade" not in ticker_data
-            or ticker_data["latestTrade"] is None
+            "latestTrade" not in ticker_data or ticker_data["latestTrade"] is None
         )
         if is_missing_trade_data:
-            raise InvalidTickerSymbolError(f"No trade data available for '{normalized_ticker}'")
+            raise InvalidTickerSymbolError(
+                f"No trade data available for '{normalized_ticker}'"
+            )
 
         latest_trade = ticker_data["latestTrade"]
         previous_day_data = ticker_data.get("prevDay", {})
 
         is_missing_previous_close = "c" not in previous_day_data
         if is_missing_previous_close:
-            raise InvalidTickerSymbolError(f"No previous close data for '{normalized_ticker}'")
+            raise InvalidTickerSymbolError(
+                f"No previous close data for '{normalized_ticker}'"
+            )
 
         timestamp_nanoseconds = latest_trade["t"]
         timestamp_seconds = timestamp_nanoseconds / NANOSECONDS_PER_SECOND
-        trade_datetime = datetime.fromtimestamp(timestamp_seconds, tz=timezone.utc)
+        trade_datetime = datetime.fromtimestamp(timestamp_seconds, tz=UTC)
         iso_timestamp = trade_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         return {
