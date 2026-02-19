@@ -28,18 +28,14 @@ async def logging_middleware(
     response = await handler(request)
     duration_ms = (time.perf_counter() - start_time) * 1000
 
-    tool_calls = response.message.tool_calls if response.message else []
-    content_length = (
-        len(response.message.content)
-        if response.message and response.message.content
-        else 0
-    )
+    tool_calls_count = _extract_tool_calls_count(response)
+    content_length = _extract_content_length(response)
 
     logger.debug(
         "agent_response session=%s content_len=%d tool_calls=%d duration=%.2fms",
         session_id,
         content_length,
-        len(tool_calls),
+        tool_calls_count,
         duration_ms,
     )
 
@@ -54,3 +50,23 @@ def _extract_session_id(request: ModelRequest) -> str:
     if context is None:
         return "unknown"
     return getattr(context, "session_id", "unknown")
+
+
+def _extract_tool_calls_count(response: ModelResponse) -> int:
+    message = getattr(response, "message", None)
+    if message is not None:
+        return len(getattr(message, "tool_calls", []))
+    return len(getattr(response, "tool_calls", []))
+
+
+def _extract_content_length(response: ModelResponse) -> int:
+    message = getattr(response, "message", None)
+    if message is not None:
+        content = getattr(message, "content", None)
+        if content:
+            return len(content)
+        return 0
+    content = getattr(response, "content", None)
+    if content:
+        return len(content)
+    return 0

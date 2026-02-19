@@ -2,42 +2,49 @@ import httpx
 from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 
 from src.config import settings
-from src.tools.weather.schemas import (
-    CurrentWeatherData,
-    GeoLocation,
-    WeatherCondition,
-)
+from src.tools.weather.schemas import WeatherAPIResponse, WeatherOutput
 
 
-OPENWEATHER_GEOCODING_BASE_URL = "http://api.openweathermap.org/geo/1.0/direct"
-OPENWEATHER_ONECALL_BASE_URL = "https://api.openweathermap.org/data/3.0/onecall"
+WEATHERAPI_BASE_URL = "http://api.weatherapi.com/v1/current.json"
 DEFAULT_TIMEOUT_SECONDS = 10.0
-GEOCODING_RESULTS_LIMIT = 1
 MAX_RETRIES = 3
 INITIAL_RETRY_DELAY_SECONDS = 1.0
+
+ERROR_CODE_LOCATION_NOT_FOUND = 1006
+ERROR_CODE_INVALID_API_KEY = 2006
+ERROR_CODE_QUOTA_EXCEEDED = 2007
 
 
 class CityNotFoundError(Exception):
     pass
 
 
-class OpenWeatherClient:
+class InvalidAPIKeyError(Exception):
+    pass
+
+
+class QuotaExceededError(Exception):
+    pass
+
+
+class WeatherAPIClient:
     def __init__(
         self,
         api_key: str | None = None,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     ):
-        self._api_key = api_key or settings.openweather_api_key
+        self._api_key = api_key or settings.weatherapi_key
         self._timeout_seconds = timeout_seconds
         self._base_headers = {"Accept": "application/json"}
 
     @property
     def is_configured(self) -> bool:
-        return self._api_key is not None and len(self._api_key) > 0
+        has_api_key = self._api_key is not None and len(self._api_key) > 0
+        return has_api_key
 
     async def _make_request(
-        self, url: str, params: dict[str, str | int]
-    ) -> dict | list:
+        self, url: str, params: dict[str, str]
+    ) -> dict:
         async for attempt in AsyncRetrying(
             stop=stop_after_attempt(MAX_RETRIES),
             wait=wait_exponential(multiplier=INITIAL_RETRY_DELAY_SECONDS),
@@ -55,79 +62,65 @@ class OpenWeatherClient:
                     return response.json()
         raise httpx.TimeoutException("Max retries exceeded")
 
-    def _build_city_query(self, city_name: str, country_code: str | None) -> str:
+    def _build_location_query(self, city_name: str, country_code: str | None) -> str:
         has_country_code = country_code is not None and len(country_code) > 0
         if has_country_code:
             return f"{city_name},{country_code}"
         return city_name
 
-    async def geocode_city(
-        self, city_name: str, country_code: str | None = None
-    ) -> GeoLocation:
-        if not self.is_configured:
-            raise ValueError("OpenWeatherMap API key is not configured")
+    def _check_api_error(self, response_data: dict) -> None:
+        has_error = "error" in response_data
+        if not has_error:
+            return
 
-        query = self._build_city_query(city_name, country_code)
-        request_params = {
-            "q": query,
-            "limit": GEOCODING_RESULTS_LIMIT,
-            "appid": self._api_key,
-        }
+        error_info = response_data.get("error", {})
+        error_code = error_info.get("code")
 
-        response_data = await self._make_request(
-            OPENWEATHER_GEOCODING_BASE_URL, request_params
-        )
+        is_location_not_found = error_code == ERROR_CODE_LOCATION_NOT_FOUND
+        is_invalid_api_key = error_code == ERROR_CODE_INVALID_API_KEY
+        is_quota_exceeded = error_code == ERROR_CODE_QUOTA_EXCEEDED
 
-        is_response_empty = not response_data or not isinstance(response_data, list)
-        if is_response_empty:
-            raise CityNotFoundError(f"City '{query}' not found")
+        if is_location_not_found:
+            raise CityNotFoundError(error_info.get("message", "Location not found"))
+        if is_invalid_api_key:
+            raise InvalidAPIKeyError("Invalid WeatherAPI.com API key")
+        if is_quota_exceeded:
+            raise QuotaExceededError("WeatherAPI.com quota exceeded")
 
-        first_result = response_data[0]
-        return GeoLocation(
-            latitude=first_result["lat"],
-            longitude=first_result["lon"],
-            city_name=first_result["name"],
-            country_code=first_result.get("country", ""),
+        raise httpx.HTTPStatusError(
+            f"WeatherAPI error: {error_info.get('message', 'Unknown error')}",
+            request=None,
+            response=None,
         )
 
     async def get_current_weather(
-        self, latitude: float, longitude: float
-    ) -> CurrentWeatherData:
+        self, city_name: str, country_code: str | None = None
+    ) -> WeatherOutput:
         if not self.is_configured:
-            raise ValueError("OpenWeatherMap API key is not configured")
+            raise ValueError("WeatherAPI.com API key is not configured")
 
+        location_query = self._build_location_query(city_name, country_code)
         request_params = {
-            "lat": latitude,
-            "lon": longitude,
-            "units": "metric",
-            "exclude": "minutely,hourly,daily,alerts",
-            "appid": self._api_key,
+            "key": self._api_key,
+            "q": location_query,
+            "aqi": "no",
         }
 
-        response_data = await self._make_request(
-            OPENWEATHER_ONECALL_BASE_URL, request_params
-        )
-        current_data = response_data.get("current", {})
+        response_data = await self._make_request(WEATHERAPI_BASE_URL, request_params)
 
-        weather_conditions = [
-            WeatherCondition(
-                condition_id=condition["id"],
-                main=condition["main"],
-                description=condition["description"],
-                icon=condition["icon"],
-            )
-            for condition in current_data.get("weather", [])
-        ]
+        self._check_api_error(response_data)
 
-        return CurrentWeatherData(
-            timestamp=current_data.get("dt", 0),
-            temperature_celsius=current_data.get("temp", 0.0),
-            feels_like_celsius=current_data.get("feels_like", 0.0),
-            humidity_percent=current_data.get("humidity", 0),
-            pressure_hpa=current_data.get("pressure", 0),
-            wind_speed_ms=current_data.get("wind_speed", 0.0),
-            wind_direction_deg=current_data.get("wind_deg", 0),
-            cloudiness_percent=current_data.get("clouds", 0),
-            visibility_meters=current_data.get("visibility", 10000),
-            conditions=weather_conditions,
+        weather_response = WeatherAPIResponse.model_validate(response_data)
+
+        return WeatherOutput(
+            city=weather_response.location.name,
+            country=weather_response.location.country,
+            region=weather_response.location.region,
+            temperature_celsius=weather_response.current.temp_c,
+            feels_like_celsius=weather_response.current.feelslike_c,
+            humidity_percent=weather_response.current.humidity,
+            conditions=weather_response.current.condition.text,
+            wind_speed_kph=weather_response.current.wind_kph,
+            visibility_km=weather_response.current.vis_km,
+            timestamp=weather_response.current.last_updated_epoch,
         )

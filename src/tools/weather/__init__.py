@@ -1,7 +1,9 @@
 from src.tools.weather.schemas import (
-    CurrentWeatherData,
-    GeoLocation,
-    WeatherCondition,
+    WeatherAPICondition,
+    WeatherAPICurrent,
+    WeatherAPIError,
+    WeatherAPILocation,
+    WeatherAPIResponse,
     WeatherInput,
     WeatherOutput,
 )
@@ -9,9 +11,11 @@ from src.tools.weather.tool import get_weather
 
 
 __all__ = [
-    "CurrentWeatherData",
-    "GeoLocation",
-    "WeatherCondition",
+    "WeatherAPICondition",
+    "WeatherAPICurrent",
+    "WeatherAPIError",
+    "WeatherAPILocation",
+    "WeatherAPIResponse",
     "WeatherInput",
     "WeatherOutput",
     "get_weather",

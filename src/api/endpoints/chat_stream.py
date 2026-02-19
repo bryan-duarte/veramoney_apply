@@ -125,7 +125,7 @@ async def _generate_stream(
 
         user_message = HumanMessage(content=message)
 
-        async for stream_mode, data in agent.stream(
+        async for stream_mode, data in agent.astream(
             {"messages": [user_message]},
             config=config,
             stream_mode=["messages", "updates"],

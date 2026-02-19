@@ -67,9 +67,9 @@ class Settings(BaseSettings):
         description="Langfuse server URL for observability data submission",
     )
 
-    openweather_api_key: str | None = Field(
+    weatherapi_key: str | None = Field(
         default=None,
-        description="OpenWeatherMap API key for weather data retrieval",
+        description="WeatherAPI.com key for weather data retrieval",
     )
 
     finnhub_api_key: str | None = Field(

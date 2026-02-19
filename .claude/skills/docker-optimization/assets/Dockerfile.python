@@ -1,0 +1,43 @@
+FROM python:3.12.1-slim@sha256:REPLACE_WITH_ACTUAL_DIGEST AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_SYSTEM_PYTHON=1
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+WORKDIR /build
+
+COPY pyproject.toml uv.lock* ./
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
+COPY src ./src
+
+RUN uv build --wheel
+
+FROM python:3.12.1-slim@sha256:REPLACE_WITH_ACTUAL_DIGEST AS runtime
+
+RUN groupadd -r appgroup -g 1000 && \
+    useradd -r -g appgroup -u 1000 appuser
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+COPY --from=builder --chown=appuser:appgroup /build/.venv ./.venv
+COPY --from=builder --chown=appuser:appgroup /build/src ./src
+
+USER appuser
+
+EXPOSE 8000
+
+CMD ["python", "-m", "src.main"]

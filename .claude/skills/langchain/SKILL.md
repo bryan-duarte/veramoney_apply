@@ -55,6 +55,7 @@ Complex patterns and production features:
 | **Context Engineering** | [context_engineering.md](reference/advanced/context_engineering.md) | Managing context windows and prompt optimization |
 | **Retrieval** | [retrieval.md](reference/advanced/retrieval.md) | RAG patterns, vector stores, and retrieval strategies |
 | **Long-term Memory** | [long_term_memorie.md](reference/advanced/long_term_memorie.md) | Persistent memory and cross-session state |
+| **Persistence** | [persistence.md](reference/advanced/persistence.md) | Graph state persistence, checkpointing, and storage backends for LangGraph applications |
 | **Guardrails** | [guardrails.md](reference/advanced/guardrails.md) | Input/output validation, safety, and compliance |
 | **RAG Agent** | [rag_agent.md](reference/advanced/rag_agent.md) | Complete tutorial for building RAG applications with agents (retrieval tools) or chains (single LLM call). Covers indexing, document loading, text splitting, vector stores, and generation |
 | **SQL Agent** | [sql_agent.md](reference/advanced/sql_agent.md) | Build an agent that answers questions about SQL databases. Covers database tools, query checking, human-in-the-loop review for query approval, and error recovery |

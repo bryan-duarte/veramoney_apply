@@ -3,7 +3,24 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     container_name: veramoney-backend
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - .venv/
+            - __pycache__/
+            - "*.pyc"
+        - action: sync
+          path: ./main.py
+          target: /app/main.py
+        - action: rebuild
+          path: ./pyproject.toml
+        - action: rebuild
+          path: ./uv.lock
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8000}:8000"
