@@ -12,7 +12,7 @@ from src.api.core import (
     rate_limit_handler,
     security_headers_middleware,
 )
-from src.api.endpoints import chat_router, health_router
+from src.api.endpoints import chat_complete_router, chat_stream_router, health_router
 from src.config import settings
 
 
@@ -50,7 +50,8 @@ def create_app() -> FastAPI:
     app.add_exception_handler(Exception, global_exception_handler)
 
     app.include_router(health_router)
-    app.include_router(chat_router)
+    app.include_router(chat_stream_router)
+    app.include_router(chat_complete_router)
 
     return app
 

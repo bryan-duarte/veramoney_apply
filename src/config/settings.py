@@ -4,6 +4,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from src.config.enums import AppStage
 
 
+def build_postgres_memory_uri(
+    host: str,
+    port: int,
+    user: str,
+    password: str,
+    database: str,
+) -> str:
+    return f"postgresql://{user}:{password}@{host}:{port}/{database}"
+
+
 class Settings(BaseSettings):
     app_stage: AppStage = Field(
         default=AppStage.DEVELOPMENT,
@@ -75,6 +85,40 @@ class Settings(BaseSettings):
         description="Use Alpaca sandbox environment instead of production",
     )
 
+    postgres_memory_host: str = Field(
+        default="localhost",
+        description="PostgreSQL memory store host for agent conversation persistence",
+    )
+    postgres_memory_port: int = Field(
+        default=5433,
+        description="PostgreSQL memory store port",
+    )
+    postgres_memory_user: str = Field(
+        default="veramoney",
+        description="PostgreSQL memory store user",
+    )
+    postgres_memory_password: str = Field(
+        default="veramoney_secret",
+        description="PostgreSQL memory store password",
+    )
+    postgres_memory_db: str = Field(
+        default="veramoney_memory",
+        description="PostgreSQL memory store database name",
+    )
+
+    agent_model: str = Field(
+        default="gpt-5-mini-2025-08-07",
+        description="OpenAI model for conversational agent",
+    )
+    agent_timeout_seconds: float = Field(
+        default=30.0,
+        description="Timeout for LLM API calls in seconds",
+    )
+    agent_max_context_messages: int = Field(
+        default=20,
+        description="Maximum messages to keep in conversation context",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -97,6 +141,17 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.app_stage == AppStage.DEVELOPMENT
+
+    @computed_field
+    @property
+    def postgres_memory_uri(self) -> str:
+        return build_postgres_memory_uri(
+            host=self.postgres_memory_host,
+            port=self.postgres_memory_port,
+            user=self.postgres_memory_user,
+            password=self.postgres_memory_password,
+            database=self.postgres_memory_db,
+        )
 
 
 settings = Settings()
