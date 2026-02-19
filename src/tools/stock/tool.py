@@ -1,16 +1,16 @@
 import httpx
 from langchain.tools import tool
 
-from src.tools.stock.client import AlpacaMarketDataClient, InvalidTickerSymbolError
+from src.tools.stock.client import FinnhubClient, InvalidSymbolError
 from src.tools.stock.schemas import StockInput, StockOutput
 
 
 async def _fetch_stock_data(ticker: str) -> StockOutput:
-    alpaca_client = AlpacaMarketDataClient()
-    snapshot_data = await alpaca_client.get_snapshot(ticker)
+    finnhub_client = FinnhubClient()
+    quote_data = await finnhub_client.get_quote(ticker)
 
-    price = snapshot_data["price"]
-    previous_close = snapshot_data["previous_close"]
+    price = quote_data["price"]
+    previous_close = quote_data["previous_close"]
     change_value = price - previous_close
     change_percent_value = (change_value / previous_close) * 100
 
@@ -23,10 +23,10 @@ async def _fetch_stock_data(ticker: str) -> StockOutput:
     )
 
     return StockOutput(
-        ticker=snapshot_data["ticker"],
+        ticker=quote_data["ticker"],
         price=price,
         currency="USD",
-        timestamp=snapshot_data["timestamp"],
+        timestamp=quote_data["timestamp"],
         change=change,
         change_percent=change_percent,
     )
@@ -35,16 +35,16 @@ async def _fetch_stock_data(ticker: str) -> StockOutput:
 @tool(args_schema=StockInput)
 async def get_stock_price(ticker: str) -> str:
     """Get current stock price for a ticker symbol. Returns price in USD, change from previous close, and timestamp."""
-    alpaca_client = AlpacaMarketDataClient()
+    finnhub_client = FinnhubClient()
 
-    is_client_not_configured = not alpaca_client.is_configured
+    is_client_not_configured = not finnhub_client.is_configured
     if is_client_not_configured:
-        return '{"error": "Stock tool not configured. Set ALPACA_API_KEY and ALPACA_SECRET_KEY environment variables."}'
+        return '{"error": "Stock tool not configured. Set FINNHUB_API_KEY environment variable."}'
 
     try:
         stock_output = await _fetch_stock_data(ticker)
         return stock_output.model_dump_json()
-    except InvalidTickerSymbolError:
+    except InvalidSymbolError:
         return f'{{"error": "Invalid ticker: {ticker}"}}'
     except httpx.HTTPStatusError as http_error:
         status_code = http_error.response.status_code

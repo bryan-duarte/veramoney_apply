@@ -48,3 +48,4 @@ Thumbs.db
 *.log
 logs/
 .claude/
+.ruff_cache/

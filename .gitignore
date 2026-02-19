@@ -13,7 +13,7 @@ wheels/
 .env
 .env.local
 .env.*.local
-
+.ruff_cache
 # Secrets
 *.pem
 *.key

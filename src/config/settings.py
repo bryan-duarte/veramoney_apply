@@ -72,17 +72,9 @@ class Settings(BaseSettings):
         description="OpenWeatherMap API key for weather data retrieval",
     )
 
-    alpaca_api_key: str | None = Field(
+    finnhub_api_key: str | None = Field(
         default=None,
-        description="Alpaca API key ID for market data",
-    )
-    alpaca_secret_key: str | None = Field(
-        default=None,
-        description="Alpaca API secret key for market data",
-    )
-    alpaca_use_sandbox: bool = Field(
-        default=False,
-        description="Use Alpaca sandbox environment instead of production",
+        description="Finnhub API key for stock market data",
     )
 
     postgres_memory_host: str = Field(
