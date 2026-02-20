@@ -127,13 +127,18 @@ class AgentFactory:
         prompt_metadata: dict | None = None,
     ) -> dict:
         callbacks = [handler] if handler else []
+        safe_prompt_metadata = {
+            k: v for k, v in (prompt_metadata or {}).items()
+            if k != "langfuse_prompt"
+        }
         metadata = {
-            **(prompt_metadata or {}),
+            **safe_prompt_metadata,
             "langfuse_session_id": session_id,
-            "langfuse_trace_name": "veramoney-chat",
+            "langfuse_tags": ["veramoney-chat"],
         }
         return {
             "configurable": {"thread_id": session_id},
+            "run_name": "veramoney-chat",
             "callbacks": callbacks,
             "metadata": metadata,
         }

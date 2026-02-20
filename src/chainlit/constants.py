@@ -5,15 +5,6 @@ MAX_RETRY_ATTEMPTS = 3
 INITIAL_RETRY_DELAY_SECONDS = 1.0
 BACKOFF_MULTIPLIER = 2
 
-WELCOME_MESSAGE = (
-    "Hello! I'm **Vera**, your AI financial assistant.\n\n"
-    "I can help you with:\n"
-    "- 🌤️ **Weather** conditions for any city\n"
-    "- 📈 **Stock prices** for any ticker symbol\n"
-    "- 💬 **Combined queries** like market impact of weather events\n\n"
-    "Try one of the suggested prompts below or ask me anything!"
-)
-
 SUGGESTED_PROMPTS = [
     "What's the weather like in Montevideo, Uruguay?",
     "What is the current stock price of Apple (AAPL)?",

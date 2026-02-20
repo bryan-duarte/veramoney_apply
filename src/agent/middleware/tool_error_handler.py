@@ -2,7 +2,7 @@ import logging
 from collections.abc import Callable
 
 from langchain.agents.middleware import wrap_tool_call
-from langchain.messages import ToolMessage
+from langchain_core.messages import ToolMessage
 from langchain.tools.tool_node import ToolCallRequest
 
 from src.tools.constants import TOOL_SERVICE_NAMES

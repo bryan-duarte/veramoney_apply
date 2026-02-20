@@ -58,7 +58,7 @@ class ChatHandlerBase:
         existing_state = await checkpointer.aget_tuple(
             {"configurable": {"thread_id": session_id}}
         )
-        existing_messages = existing_state.values.get("messages", []) if existing_state else []
+        existing_messages = existing_state.checkpoint.get("channel_values", {}).get("messages", []) if existing_state else []
         return len(existing_messages) == 0
 
     @staticmethod

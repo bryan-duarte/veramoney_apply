@@ -6,6 +6,7 @@ from src.api.core.dependencies import (
     PromptManagerDep,
     SettingsDep,
     get_api_key,
+    KnowledgeRetrieverDep,
 )
 from src.api.core.exception_handlers import global_exception_handler, rate_limit_handler
 from src.api.core.middleware import security_headers_middleware

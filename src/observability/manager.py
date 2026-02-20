@@ -90,8 +90,6 @@ class LangfuseManager:
         try:
             handler = CallbackHandler(
                 public_key=self._settings.langfuse_public_key,
-                secret_key=self._settings.langfuse_secret_key,
-                host=self._settings.langfuse_host,
             )
             logger.debug("Langfuse handler created session=%s", session_id)
             return handler

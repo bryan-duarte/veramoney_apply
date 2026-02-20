@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import HTTPException
-from langchain.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from src.api.handlers.base import ChatHandlerBase
 from src.api.schemas import ChatCompleteRequest, ChatCompleteResponse, ToolCall

@@ -2,7 +2,7 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 
-from langchain.messages import AIMessageChunk, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessageChunk, HumanMessage, ToolMessage
 
 from src.api.handlers.base import STOCK_TOOL_NAME, ChatHandlerBase
 from src.api.schemas import ChatStreamRequest

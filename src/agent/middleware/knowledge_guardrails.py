@@ -1,7 +1,7 @@
 import logging
 
 from langchain.agents.middleware import AgentState, after_model
-from langchain.messages import AIMessage, BaseMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 from langgraph.runtime import Runtime
 
 from src.tools.constants import TOOL_KNOWLEDGE
