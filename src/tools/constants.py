@@ -9,3 +9,15 @@ TOOL_SERVICE_NAMES: dict[str, str] = {
     TOOL_STOCK: "stock market data",
     TOOL_KNOWLEDGE: "knowledge base",
 }
+
+ASK_WEATHER_AGENT = "ask_weather_agent"
+ASK_STOCK_AGENT = "ask_stock_agent"
+ASK_KNOWLEDGE_AGENT = "ask_knowledge_agent"
+
+ALL_WORKER_TOOLS = [ASK_WEATHER_AGENT, ASK_STOCK_AGENT, ASK_KNOWLEDGE_AGENT]
+
+WORKER_SERVICE_NAMES: dict[str, str] = {
+    ASK_WEATHER_AGENT: "weather specialist",
+    ASK_STOCK_AGENT: "stock specialist",
+    ASK_KNOWLEDGE_AGENT: "knowledge specialist",
+}

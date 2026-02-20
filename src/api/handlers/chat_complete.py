@@ -1,10 +1,11 @@
 import logging
 
 from fastapi import HTTPException
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from src.api.handlers.base import ChatHandlerBase
-from src.api.schemas import ChatCompleteRequest, ChatCompleteResponse, ToolCall
+from src.api.schemas import ChatCompleteRequest, ChatCompleteResponse, ToolCall, WorkerToolCall
+from src.tools.constants import ALL_WORKER_TOOLS
 
 
 logger = logging.getLogger(__name__)
@@ -24,9 +25,9 @@ class ChatCompleteHandler(ChatHandlerBase):
                     model=self._settings.agent_model,
                 )
 
-            agent, config, langfuse_handler = await self._agent_factory.create_agent(request.session_id)
+            supervisor, config, langfuse_handler = await self._supervisor_factory.create_supervisor(request.session_id)
 
-            result = await agent.ainvoke(
+            result = await supervisor.ainvoke(
                 {"messages": [HumanMessage(content=request.message)]},
                 config=config,
             )
@@ -40,6 +41,7 @@ class ChatCompleteHandler(ChatHandlerBase):
                 return ChatCompleteResponse(response="Unexpected response format.", tool_calls=None)
 
             tool_calls = self._extract_tool_calls(messages)
+            worker_details = self._extract_worker_details(messages)
             self.collect_stock_queries(tool_calls or [], request.message, request.session_id)
 
             langfuse_client = self.get_langfuse_client()
@@ -48,15 +50,16 @@ class ChatCompleteHandler(ChatHandlerBase):
                 logger.debug("Langfuse flushed session=%s", request.session_id)
 
             logger.info(
-                "chat_complete session=%s response_len=%d tool_calls=%d",
+                "chat_complete session=%s response_len=%d worker_calls=%d",
                 request.session_id,
                 len(final_message.content) if final_message.content else 0,
-                len(tool_calls) if tool_calls else 0,
+                len(worker_details) if worker_details else 0,
             )
 
             return ChatCompleteResponse(
                 response=final_message.content or "",
                 tool_calls=tool_calls,
+                worker_details=worker_details,
             )
 
         except Exception as error:
@@ -83,3 +86,33 @@ class ChatCompleteHandler(ChatHandlerBase):
                         tool_calls.append(ToolCall(tool=tool_name, input=tool_args))
 
         return tool_calls if tool_calls else None
+
+    @staticmethod
+    def _extract_worker_details(messages: list) -> list[WorkerToolCall] | None:
+        worker_request_map: dict[str, str] = {}
+        worker_details: list[WorkerToolCall] = []
+
+        for message in messages:
+            is_ai_with_tool_calls = isinstance(message, AIMessage) and message.tool_calls
+            if is_ai_with_tool_calls:
+                for tc in message.tool_calls:
+                    tool_name = tc.get("name", "")
+                    is_worker_call = tool_name in ALL_WORKER_TOOLS
+                    if is_worker_call:
+                        tool_id = tc.get("id", tool_name)
+                        worker_request_map[tool_id] = tc.get("args", {}).get("request", "")
+
+        for message in messages:
+            is_tool_message = isinstance(message, ToolMessage)
+            if is_tool_message and message.name in ALL_WORKER_TOOLS:
+                worker_name = message.name.replace("ask_", "").replace("_agent", "")
+                worker_request = worker_request_map.get(message.tool_call_id, "")
+                worker_details.append(
+                    WorkerToolCall(
+                        worker_name=worker_name,
+                        worker_request=worker_request,
+                        worker_response=message.content,
+                    )
+                )
+
+        return worker_details if worker_details else None

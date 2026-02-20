@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessageChunk, HumanMessage, ToolMessage
 
 from src.api.handlers.base import STOCK_TOOL_NAME, ChatHandlerBase
 from src.api.schemas import ChatStreamRequest
+from src.tools.constants import ALL_WORKER_TOOLS
 
 
 logger = logging.getLogger(__name__)
@@ -28,11 +29,11 @@ class ChatStreamHandler(ChatHandlerBase):
                     model=self._settings.agent_model,
                 )
 
-            agent, config, langfuse_handler = await self._agent_factory.create_agent(request.session_id)
+            supervisor, config, langfuse_handler = await self._supervisor_factory.create_supervisor(request.session_id)
 
             stream_tool_calls: list[dict] = []
 
-            async for stream_mode, data in agent.astream(
+            async for stream_mode, data in supervisor.astream(
                 {"messages": [HumanMessage(content=request.message)]},
                 config=config,
                 stream_mode=["messages", "updates"],
@@ -50,10 +51,20 @@ class ChatStreamHandler(ChatHandlerBase):
                                 tool_name = tool_call.get("name")
                                 tool_args = tool_call.get("args", {})
                                 stream_tool_calls.append({"tool": tool_name, "args": tool_args})
-                                yield {
-                                    "event": "tool_call",
-                                    "data": json.dumps({"tool": tool_name, "args": tool_args}),
-                                }
+                                is_worker_call = tool_name in ALL_WORKER_TOOLS
+                                if is_worker_call:
+                                    yield {
+                                        "event": "worker_started",
+                                        "data": json.dumps({
+                                            "worker": tool_name,
+                                            "request": tool_args.get("request", ""),
+                                        }),
+                                    }
+                                else:
+                                    yield {
+                                        "event": "tool_call",
+                                        "data": json.dumps({"tool": tool_name, "args": tool_args}),
+                                    }
                 elif stream_mode == "updates":
                     for source, update in data.items():
                         is_tools_update = source == "tools"
@@ -62,13 +73,25 @@ class ChatStreamHandler(ChatHandlerBase):
                             for msg in messages:
                                 is_tool_message = isinstance(msg, ToolMessage)
                                 if is_tool_message:
-                                    yield {
-                                        "event": "tool_result",
-                                        "data": json.dumps({
-                                            "tool": getattr(msg, "name", "unknown"),
-                                            "result": msg.content,
-                                        }),
-                                    }
+                                    msg_name = getattr(msg, "name", "unknown")
+                                    is_worker_result = msg_name in ALL_WORKER_TOOLS
+                                    if is_worker_result:
+                                        worker_name = msg_name.replace("ask_", "").replace("_agent", "")
+                                        yield {
+                                            "event": "worker_completed",
+                                            "data": json.dumps({
+                                                "worker": worker_name,
+                                                "response": msg.content,
+                                            }),
+                                        }
+                                    else:
+                                        yield {
+                                            "event": "tool_result",
+                                            "data": json.dumps({
+                                                "tool": msg_name,
+                                                "result": msg.content,
+                                            }),
+                                        }
 
             self._collect_stock_queries_from_stream(
                 stream_tool_calls, request.message, request.session_id

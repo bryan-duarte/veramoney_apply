@@ -48,12 +48,31 @@ class ChainlitHandlers:
         await msg.send()
 
         pending_tools: dict[str, dict] = {}
+        pending_workers: dict[str, cl.Step] = {}
 
         try:
             async for event in client.stream_chat(message.content, session_id):
                 if event.type == "token":
                     content = str(event.data.get("content", ""))
                     await msg.stream_token(content)
+
+                elif event.type == "worker_started":
+                    worker = str(event.data.get("worker", ""))
+                    request = str(event.data.get("request", ""))
+                    display_name = self._get_worker_display_name(worker)
+                    step = cl.Step(name=display_name, type="tool")
+                    step.input = request
+                    await step.send()
+                    short_name = worker.replace("ask_", "").replace("_agent", "")
+                    pending_workers[short_name] = step
+
+                elif event.type == "worker_completed":
+                    worker = str(event.data.get("worker", ""))
+                    response = str(event.data.get("response", ""))
+                    step = pending_workers.pop(worker, None)
+                    if step:
+                        step.output = response
+                        await step.update()
 
                 elif event.type == "tool_call":
                     tool_name = str(event.data.get("tool", "tool"))
@@ -80,7 +99,7 @@ class ChainlitHandlers:
                     return
 
                 elif event.type == "done":
-                    break
+                    pass
 
         except Exception:
             logger.exception("handler_error session=%s", session_id)
@@ -89,6 +108,15 @@ class ChainlitHandlers:
             return
 
         await msg.update()
+
+    @staticmethod
+    def _get_worker_display_name(worker: str) -> str:
+        names = {
+            "ask_weather_agent": "🌤️ Weather Specialist",
+            "ask_stock_agent": "📈 Stock Specialist",
+            "ask_knowledge_agent": "📚 Knowledge Specialist",
+        }
+        return names.get(worker, worker.replace("_", " ").title())
 
     @staticmethod
     def _extract_tool_context(tool_name: str, tool_args: dict) -> str:

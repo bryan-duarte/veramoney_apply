@@ -1,4 +1,5 @@
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -98,6 +99,19 @@ class ToolCall(BaseModel):
     input: dict = Field(..., description="Input parameters passed to the tool")
 
 
+class WorkerToolCall(BaseModel):
+    worker_name: str = Field(..., description="Worker specialist name: weather, stock, or knowledge")
+    worker_request: str = Field(..., description="Request sent to the worker specialist")
+    worker_response: str = Field(..., description="Worker specialist's final response")
+    duration_ms: float | None = Field(None, description="Worker execution time in milliseconds")
+
+
+class WorkerProgressEvent(BaseModel):
+    event_type: Literal["worker_started", "worker_tool_call", "worker_tool_result", "worker_completed"]
+    worker_name: str = Field(..., description="Worker specialist name")
+    data: dict = Field(..., description="Event-specific payload")
+
+
 class ChatCompleteResponse(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
@@ -107,26 +121,29 @@ class ChatCompleteResponse(BaseModel):
                     "with 65% humidity. The wind speed is 12 km/h.",
                     "tool_calls": [
                         {
-                            "tool": "weather",
-                            "input": {"city_name": "Montevideo", "country_code": "UY"},
+                            "tool": "ask_weather_agent",
+                            "input": {"request": "What is the weather in Montevideo?"},
                         }
                     ],
-                },
-                {
-                    "response": "Apple (AAPL) is currently trading at $178.52 USD, "
-                    "up 1.23% from the previous close. Microsoft (MSFT) is at $378.91 USD, "
-                    "down 0.45%.",
-                    "tool_calls": [
-                        {"tool": "stock_price", "input": {"ticker": "AAPL"}},
-                        {"tool": "stock_price", "input": {"ticker": "MSFT"}},
+                    "worker_details": [
+                        {
+                            "worker_name": "weather",
+                            "worker_request": "What is the weather in Montevideo?",
+                            "worker_response": "In Montevideo, it's currently 22C and partly cloudy.",
+                            "duration_ms": None,
+                        }
                     ],
                 },
             ]
         }
     )
 
-    response: str = Field(..., description="The assistant's response")
+    response: str = Field(..., description="The supervisor's synthesized response")
     tool_calls: list[ToolCall] | None = Field(
         None,
-        description="List of tools called during processing",
+        description="List of worker tools invoked by the supervisor",
+    )
+    worker_details: list[WorkerToolCall] | None = Field(
+        None,
+        description="Detailed information about each worker specialist invocation",
     )

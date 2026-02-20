@@ -2,13 +2,14 @@ import logging
 
 from langfuse import Langfuse
 
-from src.agent.core.factory import AgentFactory
+from src.agent.core.supervisor import SupervisorFactory
 from src.agent.memory.store import MemoryStore
 from src.config import Settings
 from src.observability.datasets import DatasetManager
 from src.observability.manager import LangfuseManager
 from src.observability.prompts import PromptManager
 from src.rag.retriever import KnowledgeRetriever
+from src.tools.constants import ASK_STOCK_AGENT
 
 
 logger = logging.getLogger(__name__)
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 WEATHER_KEYWORDS = ("weather", "temperature", "clima", "temperatura")
 STOCK_KEYWORDS = ("stock", "price", "acción", "precio")
 KNOWLEDGE_KEYWORDS = ("vera", "fintech", "regulation", "bank")
-STOCK_TOOL_NAME = "get_stock_price"
+STOCK_TOOL_NAME = ASK_STOCK_AGENT
 
 
 class ChatHandlerBase:
@@ -24,7 +25,7 @@ class ChatHandlerBase:
         self,
         settings: Settings,
         memory_store: MemoryStore,
-        agent_factory: AgentFactory | None = None,
+        supervisor_factory: SupervisorFactory | None = None,
         langfuse_manager: LangfuseManager | None = None,
         dataset_manager: DatasetManager | None = None,
         prompt_manager: PromptManager | None = None,
@@ -36,7 +37,7 @@ class ChatHandlerBase:
         self._dataset_manager = dataset_manager or DatasetManager(langfuse_manager=langfuse_manager)
         self._prompt_manager = prompt_manager
         self._knowledge_retriever = knowledge_retriever
-        self._agent_factory = agent_factory or AgentFactory(
+        self._supervisor_factory = supervisor_factory or SupervisorFactory(
             settings=settings,
             memory_store=memory_store,
             langfuse_manager=langfuse_manager,

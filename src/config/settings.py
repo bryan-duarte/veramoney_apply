@@ -100,6 +100,14 @@ class Settings(BaseSettings):
         default=20,
         description="Maximum messages to keep in conversation context",
     )
+    worker_model: str = Field(
+        default="gpt-5-nano-2025-08-07",
+        description="OpenAI model for worker agents (specialists)",
+    )
+    worker_timeout_seconds: float = Field(
+        default=60.0,
+        description="Timeout for worker agent API calls in seconds",
+    )
 
     chroma_host: str = Field(
         default="localhost",

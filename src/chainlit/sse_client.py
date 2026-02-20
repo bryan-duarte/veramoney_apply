@@ -141,6 +141,7 @@ class SSEClient:
                 raise _RetryableHTTPError(response.status_code)
 
             current_event: str | None = None
+            _seen_done: bool = False
 
             async for line in response.aiter_lines():
                 if line.startswith("event:"):
@@ -159,10 +160,12 @@ class SSEClient:
 
                     event_type = current_event or "token"
                     event = SSEEvent(type=event_type, data=data)
-                    yield event
+
+                    if not _seen_done:
+                        yield event
 
                     if event_type == "done":
-                        return
+                        _seen_done = True
 
                     current_event = None
 
