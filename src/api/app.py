@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -14,7 +15,16 @@ from src.api.core import (
     security_headers_middleware,
 )
 from src.api.endpoints import chat_complete_router, chat_stream_router, health_router
+from src.config import configure_logging
 from src.config import settings
+from src.rag import initialize_rag_pipeline
+from src.tools.knowledge import configure_knowledge_client
+
+
+_LOG_LEVEL = configure_logging()
+
+logger = logging.getLogger(__name__)
+logger.info("Logging configured: level=%s", _LOG_LEVEL)
 
 
 OPENAPI_TAGS_METADATA = [
@@ -38,7 +48,51 @@ OPENAPI_TAGS_METADATA = [
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    logger.info("=" * 60)
+    logger.info("APPLICATION STARTUP")
+    logger.info("=" * 60)
+
+    rag_init_success = False
+
+    try:
+        retriever, status = await initialize_rag_pipeline(
+            chroma_host=settings.chroma_host,
+            chroma_port=settings.chroma_port,
+            collection_name=settings.rag_collection_name,
+            openai_api_key=settings.openai_api_key,
+            embedding_model=settings.openai_embedding_model,
+            retrieval_k=settings.rag_retrieval_k,
+        )
+
+        configure_knowledge_client(retriever)
+        rag_init_success = True
+
+        if status.errors:
+            logger.warning("RAG completed with %d error(s):", len(status.errors))
+            for error in status.errors:
+                logger.warning("  - %s", error)
+
+    except Exception as error:
+        logger.exception("RAG PIPELINE FAILED: %s", str(error))
+        logger.warning("Application will continue WITHOUT knowledge base")
+        logger.warning("Only weather and stock tools will be available")
+
+    app.state.rag_initialized = rag_init_success
+
+    logger.info("-" * 60)
+    logger.info("AVAILABLE TOOLS:")
+    logger.info("  - get_weather: %s", "enabled" if settings.weatherapi_key else "disabled (no API key)")
+    logger.info("  - get_stock_price: %s", "enabled" if settings.finnhub_api_key else "disabled (no API key)")
+    logger.info("  - search_knowledge: %s", "enabled" if rag_init_success else "disabled (RAG failed)")
+    logger.info("=" * 60)
+    logger.info("APPLICATION READY")
+    logger.info("=" * 60)
+
     yield
+
+    logger.info("=" * 60)
+    logger.info("APPLICATION SHUTDOWN")
+    logger.info("=" * 60)
 
 
 def _build_custom_openapi(app: FastAPI):

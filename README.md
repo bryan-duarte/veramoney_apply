@@ -196,7 +196,7 @@ curl -X POST "http://localhost:8000/chat" \
 | `APP_PORT` | `8000` | Server port |
 | `CORS_ORIGINS` | `""` | Comma-separated allowed CORS origins |
 | `RATE_LIMIT_PER_MINUTE` | `60` | Rate limit per API key |
-| `OPENAI_MODEL` | `gpt-4o-mini` | Chat model name |
+| `OPENAI_MODEL` | `gpt-5-mini-2025-08-07` | Chat model name |
 | `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model name |
 
 ### Langfuse (Optional)

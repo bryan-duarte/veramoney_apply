@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 TOOL_STOCK = "get_stock_price"
 TOOL_WEATHER = "get_weather"
+TOOL_KNOWLEDGE = "search_knowledge"
 
 
 def extract_tool_context(tool_name: str, tool_args: dict) -> str:
@@ -21,6 +22,9 @@ def extract_tool_context(tool_name: str, tool_args: dict) -> str:
         return tool_args.get("ticker", "")
     if tool_name == TOOL_WEATHER:
         return tool_args.get("city_name", "")
+    if tool_name == TOOL_KNOWLEDGE:
+        document_type = tool_args.get("document_type", "")
+        return document_type if document_type else "all documents"
     return ""
 
 
@@ -29,6 +33,8 @@ def build_step_name(tool_name: str, context: str) -> str:
         return f"Fetching stock data for {context}" if context else "Fetching stock data"
     if tool_name == TOOL_WEATHER:
         return f"Fetching weather for {context}" if context else "Fetching weather"
+    if tool_name == TOOL_KNOWLEDGE:
+        return f"Searching knowledge base ({context})" if context else "Searching knowledge base"
     return tool_name.replace("_", " ").title()
 
 
@@ -37,6 +43,8 @@ def build_step_output(tool_name: str, context: str) -> str:
         return f"Retrieved stock data for {context}" if context else "Retrieved stock data"
     if tool_name == TOOL_WEATHER:
         return f"Retrieved weather for {context}" if context else "Retrieved weather"
+    if tool_name == TOOL_KNOWLEDGE:
+        return "Found relevant documents"
     return "Completed"
 
 

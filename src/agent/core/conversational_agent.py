@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Any
 
 from langchain.agents import create_agent
@@ -8,21 +7,18 @@ from langchain_openai import ChatOpenAI
 from src.agent.core.prompts import VERA_SYSTEM_PROMPT
 from src.agent.memory.store import MemoryStore
 from src.agent.middleware import (
+    knowledge_guardrails,
     logging_middleware,
     output_guardrails,
     tool_error_handler,
 )
 from src.config import Settings
+from src.tools.knowledge import search_knowledge
 from src.tools.stock import get_stock_price
 from src.tools.weather import get_weather
 
 
 logger = logging.getLogger(__name__)
-
-
-def _build_system_prompt() -> str:
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    return VERA_SYSTEM_PROMPT.format(current_date=current_date)
 
 
 async def create_conversational_agent(
@@ -36,12 +32,13 @@ async def create_conversational_agent(
         api_key=settings.openai_api_key,
     )
 
-    tools = [get_weather, get_stock_price]
+    tools = [get_weather, get_stock_price, search_knowledge]
 
     middleware_stack = [
         logging_middleware,
         tool_error_handler,
         output_guardrails,
+        knowledge_guardrails,
     ]
 
     checkpointer = memory_store.get_checkpointer()
@@ -55,12 +52,12 @@ async def create_conversational_agent(
     agent = create_agent(
         model=model,
         tools=tools,
-        system_prompt=_build_system_prompt(),
+        system_prompt=VERA_SYSTEM_PROMPT,
         middleware=middleware_stack,
         checkpointer=checkpointer,
     )
 
-    logger.debug(
+    logger.info(
         "created_agent session=%s model=%s tools=%s",
         session_id,
         settings.agent_model,

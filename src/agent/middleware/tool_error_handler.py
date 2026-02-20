@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 TOOL_SERVICE_NAMES: dict[str, str] = {
     "get_weather": "weather data",
     "get_stock_price": "stock market data",
+    "search_knowledge": "knowledge base",
 }
 
 

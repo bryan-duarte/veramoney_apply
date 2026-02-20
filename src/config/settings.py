@@ -50,7 +50,7 @@ class Settings(BaseSettings):
         description="OpenAI model name for generating text embeddings",
     )
     openai_model: str = Field(
-        default="gpt-4o-mini",
+        default="gpt-5-mini-2025-08-07",
         description="OpenAI model name for chat completions",
     )
 
@@ -109,6 +109,23 @@ class Settings(BaseSettings):
     agent_max_context_messages: int = Field(
         default=20,
         description="Maximum messages to keep in conversation context",
+    )
+
+    chroma_host: str = Field(
+        default="localhost",
+        description="ChromaDB server host for vector storage",
+    )
+    chroma_port: int = Field(
+        default=8001,
+        description="ChromaDB server port for vector storage",
+    )
+    rag_collection_name: str = Field(
+        default="veramoney_knowledge",
+        description="ChromaDB collection name for RAG knowledge base",
+    )
+    rag_retrieval_k: int = Field(
+        default=4,
+        description="Number of documents to retrieve per RAG query",
     )
 
     enable_docs: bool | None = Field(
