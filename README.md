@@ -1,243 +1,642 @@
+<div align="center">
+
 # VeraMoney Apply
 
-AI-powered service with LLM-based agents, tool integration, and retrieval-augmented generation (RAG) capabilities in a regulated fintech environment.
+**Production-Ready AI Assistant Platform with Multi-Agent Architecture**
+
+*A technical assessment project demonstrating modern AI engineering practices for fintech environments*
+
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue?logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.129%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![LangChain](https://img.shields.io/badge/LangChain-1.2%2B-1C3C3C?logo=langchain&logoColor=white)](https://www.langchain.com/)
+[![Code style: clean](https://img.shields.io/badge/code%20style-clean-8A2BE2)]()
+
+[🚀 Quick Start](#-quick-start) • [📖 Documentation](#-api-documentation) • [🏗️ Architecture](#️-architecture) • [🔧 Configuration](#-configuration)
+
+</div>
 
 ---
 
-## Technology Stack
+## 📋 Table of Contents
 
-| Component | Technology | Version |
-|-----------|------------|---------|
-| **Language** | Python | 3.11+ |
-| **API Framework** | FastAPI | >=0.129.0 |
-| **ASGI Server** | Uvicorn | >=0.41.0 |
-| **Agent Framework** | LangChain | >=1.2.10 |
-| **LLM Integration** | langchain-openai | >=1.1.10 |
-| **Vector Database** | ChromaDB | >=1.5.0 |
-| **Data Validation** | Pydantic | >=2.12.5 |
-| **Observability** | Langfuse | >=3.14.3 |
-| **Package Manager** | uv | Fast Python package installer |
+- [Overview](#-overview)
+- [Features](#-features)
+- [Architecture](#️-architecture)
+- [Quick Start](#-quick-start)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [API Documentation](#-api-documentation)
+- [Technology Stack](#️-technology-stack)
+- [Project Structure](#-project-structure)
+- [Docker Deployment](#-docker-deployment)
+- [Observability](#-observability)
+- [Security](#-security)
 
 ---
 
-## Project Structure
+## 🎯 Overview
+
+**VeraMoney Apply** is a technical assessment project for an AI Platform Engineer position. It implements a production-ready AI-powered assistant service demonstrating:
+
+<table>
+<tr>
+<td width="50%">
+
+### Core Capabilities
+- 🤖 **Multi-Agent Architecture** — Supervisor pattern with specialized workers
+- 🔧 **Tool Integration** — Weather, stock prices, knowledge retrieval
+- 📚 **RAG Pipeline** — ChromaDB-powered retrieval with citations
+- 📡 **Streaming API** — Real-time SSE responses
+- 📈 **Full Observability** — Langfuse tracing and prompt management
+
+</td>
+<td width="50%">
+
+### Engineering Excellence
+- ⚡ **Async-First** — 100% asynchronous I/O operations
+- 🛡️ **Guardrails** — Hallucination detection and citation validation
+- 🔐 **Production Security** — API keys, rate limiting, CORS
+- 🐳 **Docker-Ready** — Complete containerized stack
+- 📝 **Clean Code** — Type hints, Pydantic schemas, self-documenting
+
+</td>
+</tr>
+</table>
+
+---
+
+## ✨ Features
+
+### 🤖 Intelligent Multi-Agent System
 
 ```
-veramoney-apply/
-├── main.py                    # Entry point for the application
-├── pyproject.toml             # Project configuration and dependencies
-├── Dockerfile                 # Multi-stage Docker build
-├── docker-compose.yml         # Full observability stack
-├── .env.example               # Environment variables template
-│
-├── src/
-│   ├── api/                   # API layer (implemented)
-│   │   ├── main.py            # FastAPI app factory with middleware
-│   │   ├── dependencies.py    # Dependency injection
-│   │   └── endpoints/
-│   │       └── chat.py        # /chat endpoint
-│   │
-│   ├── agent/                 # Agent layer (pending)
-│   │   └── multi_agent/
-│   │       └── workers/
-│   │
-│   ├── tools/                 # Tools layer (pending)
-│   │   ├── weather/
-│   │   └── stock/
-│   │
-│   ├── rag/                   # RAG pipeline (pending)
-│   │
-│   ├── observability/         # Observability layer (pending)
-│   │
-│   └── config/                # Configuration layer (implemented)
-│
-└── docs/
-    ├── challenge_tasks/       # Challenge requirements
-    ├── plans/                 # Implementation plans
-    └── reports/               # Analysis reports
+┌─────────────────────────────────────────────────────────────┐
+│                      SUPERVISOR AGENT                        │
+│              Routes requests to specialists                  │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+        ┌─────────────────┼─────────────────┐
+        ▼                 ▼                 ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+│    WEATHER    │ │    STOCK      │ │   KNOWLEDGE   │
+│   SPECIALIST  │ │  SPECIALIST   │ │   SPECIALIST  │
+│               │ │               │ │               │
+│  WeatherAPI   │ │   Finnhub     │ │   ChromaDB    │
+└───────────────┘ └───────────────┘ └───────────────┘
 ```
 
+| Agent | Capability | Data Source |
+|-------|------------|-------------|
+| **Weather Specialist** | Current conditions, temperature, forecasts | WeatherAPI.com |
+| **Stock Specialist** | Real-time prices, percentage changes | Finnhub API |
+| **Knowledge Specialist** | Company history, regulations, policies | ChromaDB + RAG |
+
+### 🛡️ AI Safety & Quality Guardrails
+
+| Guardrail | Purpose | Implementation |
+|-----------|---------|----------------|
+| **Hallucination Detection** | Validates LLM claims against tool outputs | Temperature ±1°C, Price ±0.01% tolerance |
+| **Citation Verification** | Ensures RAG responses cite sources | Bilingual (EN/ES) citation indicators |
+| **Fabrication Detection** | Prevents invented document references | Fuzzy title matching against retrieval |
+| **Error Transformation** | User-friendly error messages | Technical errors → natural language |
+
+### 📡 Dual-Mode API
+
+| Mode | Endpoint | Use Case |
+|------|----------|----------|
+| **Streaming** | `POST /chat` | Real-time token streaming, worker progress, this is |
+| **Batch** | `POST /chat/complete` | Complete responses, programmatic access |
+
 ---
 
-## Implementation Status
+## 🏗️ Architecture
 
-| Layer | Status | Location |
-|-------|--------|----------|
-| **API Layer** | Implemented | `src/api/` |
-| **Configuration** | Implemented | `src/config/` |
-| **Agent Layer** | Pending | `src/agent/` |
-| **Tools Layer** | Pending | `src/tools/` |
-| **RAG Pipeline** | Pending | `src/rag/` |
-| **Observability** | Pending | `src/observability/` |
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              CLIENT LAYER                                │
+│  ┌─────────────────┐              ┌─────────────────┐                   │
+│  │   Chainlit UI   │              │   REST Clients  │                   │
+│  │  (Port 8000)    │              │   (Any Port)    │                   │
+│  └────────┬────────┘              └────────┬────────┘                   │
+└───────────┼───────────────────────────────┼─────────────────────────────┘
+            │        SSE Streaming          │
+            ▼                               ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              API LAYER                                   │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                    FastAPI Application                           │   │
+│  │  • X-API-Key Authentication  • Rate Limiting (60/min)          │   │
+│  │  • SSE Streaming (/chat)     • Batch Endpoint (/chat/complete) │   │
+│  │  • CORS Configuration        • Graceful Shutdown               │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────┬──────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          AGENT LAYER                                     │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │              SUPERVISOR + WORKER AGENTS                          │   │
+│  │  Middleware: Logging → Error Handling → Guardrails → Citations  │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                   │                                      │
+│         ┌─────────────────────────┼─────────────────────────┐           │
+│         ▼                         ▼                         ▼           │
+│  ┌─────────────┐          ┌─────────────┐          ┌─────────────┐     │
+│  │   Weather   │          │    Stock    │          │  Knowledge  │     │
+│  │   Worker    │          │   Worker    │          │   Worker    │     │
+│  └──────┬──────┘          └──────┬──────┘          └──────┬──────┘     │
+│         │                        │                        │             │
+│         ▼                        ▼                        ▼             │
+│  [WeatherAPI]             [Finnhub]               [ChromaDB + RAG]      │
+└─────────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        INFRASTRUCTURE LAYER                              │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐               │
+│  │  PostgreSQL   │  │   ChromaDB    │  │   Langfuse    │               │
+│  │  (Memory)     │  │  (Vectors)    │  │(Observability)│               │
+│  └───────────────┘  └───────────────┘  └───────────────┘               │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Architectural Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **Agent Pattern** | Supervisor Multi-Agent | Clean delegation, context isolation, easier debugging |
+| **Agent Framework** | LangChain v1 `create_agent` (The recomended method to create agents by Langchain) | Current API, middleware support, no deprecated patterns (Chains, create react agent, etc) |
+| **Vector Store** | ChromaDB | Self-hosted, Docker-friendly, metadata filtering, free (The best part) |
+| **Observability** | Langfuse v3 | LLM-native metrics, open-source, self-hostable (Much cheaper than Langsmith) |
+| **Streaming** | Server-Sent Events | Simpler than WebSocket, fits request-response pattern, perfect for a good ux in the chat frontend |
 
 ---
 
-## Quick Start
+## ⚖️ Design Trade-offs
 
-### 1. Install Dependencies
+This section documents the key architectural decisions, alternatives considered, and trade-offs accepted.
+
+### 1. Supervisor Pattern vs. Router Pattern (StateGraph)
+
+| Aspect | Supervisor (Chosen) | Router (StateGraph) |
+|--------|---------------------|---------------------|
+| **Implementation Complexity** | Low | Medium-High |
+| **Parallel Execution** | Sequential only | Yes, parallel worker calls |
+| **Latency for Multi-Source Queries** | Higher (sequential) | Lower (parallel) |
+| **Debugging Ease** | Easy - clear delegation chain | Harder - concurrent state |
+| **State Management** | Simpler | More complex |
+
+**Decision:** Chose **Supervisor Pattern** for simplicity and debuggability in this demo.
+
+**Trade-off Accepted:** Sequential execution means multi-source queries (e.g., "weather AND stock") take longer, but the code is significantly easier to maintain and debug in production.
+
+**IMPORTANT:** If the latency its gona be the key factor in a future real scenario, we should consider using the Router Pattern (StateGraph) for parallel execution.
+
+---
+
+### 3. Async-First Architecture
+
+| Aspect | Async (Chosen) | Sync |
+|--------|----------------|------|
+| **Code Complexity** | Higher (async/await everywhere) | Lower |
+| **Resource Efficiency** | Excellent | Good |
+| **LLM API Compatibility** | Native (`ainvoke`, `astream`) | Requires wrappers |
+
+**Decision:** Chose **100% Async** throughout the codebase.
+
+**Trade-off Accepted:** Increased code complexity and learning curve, but essential for an I/O-bound application (LLM calls, HTTP requests, database queries).
+
+---
+
+### 4. Non-Blocking Guardrails vs. Hard Validation
+
+| Aspect | Non-Blocking (Chosen) | Hard Validation |
+|--------|----------------------|-----------------|
+| **User Experience** | Response always returned | May fail mid-stream |
+| **Hallucination Prevention** | Logging only | Blocks bad responses |
+| **Production Safety** | Degraded but functional | May block legitimate responses |
+| **Iterability** | Datasets for improvement | Harder to tune |
+
+**Decision:** Chose **Non-Blocking Guardrails** that log warnings but don't block responses.
+
+**Trade-off Accepted:** Some hallucinations may reach users, but:
+1. Logs and dataset save the examples for future improvement
+2. System remains available even when guardrails detect issues
+3. False positives don't block legitimate responses
+
+---
+
+### 6. Tool-Wrapped Subagents (Agent as a tool) vs. Direct Tools
+
+| Aspect | Tool-Wrapped (Chosen) | Direct Tools |
+|--------|----------------------|--------------|
+| **Abstraction Level** | High (semantic) | Low (mechanical) |
+| **Error Isolation** | Worker handles own errors | Errors propagate to agent |
+| **Model Cost** | Higher (multiple LLM calls) | Lower (single call) |
+| **Specialization** | Domain-specific prompts | Generic handling |
+
+**Decision:** Chose **Tool-Wrapped Subagents** where each worker has specialized prompts.
+
+**Trade-off Accepted:** Higher token costs (each worker makes its own LLM call), but:
+1. Better error isolation
+2. Domain-specific prompts improve accuracy
+3. Each worker can use cheaper models (`gpt-5-nano` vs `gpt-5-mini`)
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+<table>
+<tr>
+<td>
+
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-24%2B-2496ED?logo=docker&logoColor=white)
+![uv](https://img.shields.io/badge/uv-0.1%2B-purple)
+
+</td>
+</tr>
+</table>
+
+### 30-Second Setup
 
 ```bash
-uv sync
-source .venv/bin/activate
-```
+# Clone the repository
+git clone https://github.com/yourusername/veramoney-apply.git
+cd veramoney-apply
 
-### 2. Configure Environment Variables
-
-```bash
+# Copy environment template
 cp .env.example .env
-```
 
-Edit `.env` and set the required values:
+# Edit .env with your API keys
+# OPENAI_API_KEY=sk-...
+# API_KEY=your-secure-api-key
 
-```bash
-# REQUIRED
-API_KEY=your-secret-api-key-here
-OPENAI_API_KEY=sk-your-openai-key-here
-```
+# Start all services (API, ChromaDB, Langfuse)
+docker compose up -d
 
-### 3. Run the Application
-
-```bash
-# Option A: Using Python directly
-python main.py
-
-# Option B: Using uvicorn with hot reload (recommended)
-uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### 4. Run with Docker (Full Stack)
-
-```bash
-docker-compose up -d
-docker-compose logs -f app
-```
-
----
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check |
-| `/chat` | POST | Send message to AI assistant |
-
----
-
-## Testing the Chat Endpoint
-
-### Health Check
-
-```bash
+# Check service health
 curl http://localhost:8000/health
 ```
 
-### Chat Endpoint
+### First Request
 
 ```bash
-curl -X POST "http://localhost:8000/chat" \
+curl -X POST http://localhost:8000/chat \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secret-api-key-here" \
+  -H "X-API-Key: your-api-key" \
   -d '{
-    "message": "What is the weather in Montevideo?",
-    "session_id": "123e4567-e89b-12d3-a456-426614174000"
+    "message": "What is the weather in Montevideo and the stock price of AAPL?",
+    "session_id": "550e8400-e29b-41d4-a716-446655440000"
   }'
 ```
 
-**Replace** `your-secret-api-key-here` with the value you set for `API_KEY` in your `.env` file.
+---
 
-### Request Schema
+## 📦 Installation
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `message` | `string` | **Yes** | User message (1-32000 characters) |
-| `session_id` | `string` | No | UUID for conversation continuity |
+### Docker
 
-### Response Format
+```bash
+# Start full stack with observability
+docker compose up -d
+
+# Services available:
+# - API:          http://localhost:8000
+# - Chainlit UI:  http://localhost:8002
+# - Langfuse:     http://localhost:3003
+# - API Docs:     http://localhost:8000/docs
+```
+
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file based on `.env.example`:
+
+<table>
+<tr>
+<th colspan="3">🔑 Core Configuration</th>
+</tr>
+<tr>
+<th>Variable</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+<tr>
+<td><code>OPENAI_API_KEY</code></td>
+<td>✅ Yes</td>
+<td>OpenAI API key for LLM and embeddings</td>
+</tr>
+<tr>
+<td><code>API_KEY</code></td>
+<td>✅ Yes</td>
+<td>API key for authenticating requests</td>
+</tr>
+<tr>
+<td><code>ENVIRONMENT</code></td>
+<td>❌ No</td>
+<td>Application stage: development, qa, production</td>
+</tr>
+<tr>
+<td><code>LOG_LEVEL</code></td>
+<td>❌ No</td>
+<td>Logging level (default: info)</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<th colspan="3">🌐 External APIs (Optional)</th>
+</tr>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+<tr>
+<td><code>WEATHERAPI_KEY</code></td>
+<td>None</td>
+<td>WeatherAPI.com key for weather tool</td>
+</tr>
+<tr>
+<td><code>FINNHUB_API_KEY</code></td>
+<td>None</td>
+<td>Finnhub key for stock price tool</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<th colspan="3">📊 Observability (Optional)</th>
+</tr>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+<tr>
+<td><code>LANGFUSE_PUBLIC_KEY</code></td>
+<td>None</td>
+<td>Langfuse public key for tracing</td>
+</tr>
+<tr>
+<td><code>LANGFUSE_SECRET_KEY</code></td>
+<td>None</td>
+<td>Langfuse secret key</td>
+</tr>
+<tr>
+<td><code>LANGFUSE_HOST</code></td>
+<td>localhost:3003</td>
+<td>Langfuse server URL</td>
+</tr>
+</table>
+
+### Feature Flags
+
+| Flag | Computed From | Effect |
+|------|---------------|--------|
+| `docs_enabled` | `ENVIRONMENT != production` | OpenAPI documentation |
+| `langfuse_enabled` | Both Langfuse keys present | Observability tracing |
+| `weather_enabled` | `WEATHERAPI_KEY` present | Weather tool active |
+| `stock_enabled` | `FINNHUB_API_KEY` present | Stock tool active |
+
+---
+
+## 📖 API Documentation
+
+### Endpoints Overview
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/health` | ❌ | Health check for load balancers |
+| `POST` | `/chat` | ✅ | Streaming chat with SSE |
+| `POST` | `/chat/complete` | ✅ | Complete chat response |
+| `GET` | `/docs` | ❌ | OpenAPI documentation (dev only) |
+| `GET` | `/redoc` | ❌ | ReDoc documentation (dev only) |
+
+### Chat Request Schema
 
 ```json
 {
-  "response": "The assistant's response text",
-  "tool_calls": [
-    {
-      "tool": "weather",
-      "input": {"city": "Montevideo"}
-    }
-  ]
+  "message": "What's the weather in Montevideo?",
+  "session_id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `message` | string | 1-32,000 chars | User's message to the assistant |
+| `session_id` | string | UUID format | Conversation thread identifier |
+
+### Streaming Events (SSE)
+
+```
+event: token
+data: {"content": "The"}
+
+event: worker_started
+data: {"worker": "ask_weather_agent", "request": "weather in Montevideo"}
+
+event: worker_completed
+data: {"worker": "ask_weather_agent", "response": "..."}
+
+event: done
+data: {}
+```
+
+| Event | Description |
+|-------|-------------|
+| `token` | Individual content chunk for real-time display |
+| `worker_started` | Specialist agent began processing |
+| `worker_completed` | Specialist agent finished |
+| `tool_call` | Tool invocation (non-worker) |
+| `tool_result` | Tool response (non-worker) |
+| `done` | Stream completed |
+| `error` | Error occurred |
 
 ### HTTP Status Codes
 
 | Code | Meaning |
 |------|---------|
-| 200 | Success |
-| 400 | Invalid request body |
-| 401 | Invalid or missing `X-API-Key` header |
-| 429 | Rate limit exceeded (60 req/min default) |
-| 500 | Internal server error |
+| `200` | Success |
+| `400` | Invalid request body |
+| `401` | Invalid or missing `X-API-Key` header |
+| `429` | Rate limit exceeded (60 req/min default) |
+| `500` | Internal server error |
 
 ---
 
-## Environment Variables
+## 🛠️ Technology Stack
 
-### Required
+<table>
+<tr>
+<th width="20%">Layer</th>
+<th width="40%">Technology</th>
+<th width="40%">Purpose</th>
+</tr>
+<tr>
+<td><strong>Language</strong></td>
+<td>
 
-| Variable | Description |
-|----------|-------------|
-| `API_KEY` | Secret API key for request authentication |
-| `OPENAI_API_KEY` | OpenAI API key for LLM and embedding models |
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 
-### Optional
+</td>
+<td>Type hints, async/await, pattern matching</td>
+</tr>
+<tr>
+<td><strong>API Framework</strong></td>
+<td>
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ENVIRONMENT` | `development` | Deployment stage (development, qa, production) |
-| `LOG_LEVEL` | `info` | Logging level |
-| `APP_PORT` | `8000` | Server port |
-| `CORS_ORIGINS` | `""` | Comma-separated allowed CORS origins |
-| `RATE_LIMIT_PER_MINUTE` | `60` | Rate limit per API key |
-| `OPENAI_MODEL` | `gpt-5-mini-2025-08-07` | Chat model name |
-| `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model name |
+![FastAPI](https://img.shields.io/badge/FastAPI-0.129%2B-009688?logo=fastapi&logoColor=white)
 
-### Langfuse (Optional)
+</td>
+<td>Async endpoints, OpenAPI, dependency injection</td>
+</tr>
+<tr>
+<td><strong>Agent Framework</strong></td>
+<td>
 
-| Variable | Description |
-|----------|-------------|
-| `LANGFUSE_PUBLIC_KEY` | Langfuse public key |
-| `LANGFUSE_SECRET_KEY` | Langfuse secret key |
-| `LANGFUSE_HOST` | Langfuse server URL |
+![LangChain](https://img.shields.io/badge/LangChain-1.2%2B-1C3C3C)
+
+</td>
+<td>Agent creation, tools, middleware, streaming</td>
+</tr>
+<tr>
+<td><strong>LLM Provider</strong></td>
+<td>
+
+![OpenAI](https://img.shields.io/badge/OpenAI-GPT--5-412991?logo=openai&logoColor=white)
+
+</td>
+<td>Chat completions, embeddings</td>
+</tr>
+<tr>
+<td><strong>Vector Store</strong></td>
+<td>
+
+![ChromaDB](https://img.shields.io/badge/ChromaDB-1.5%2B-FF6B6B)
+
+</td>
+<td>Document embeddings, similarity search</td>
+</tr>
+<tr>
+<td><strong>Memory Store</strong></td>
+<td>
+
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?logo=postgresql&logoColor=white)
+
+</td>
+<td>Conversation persistence, LangGraph checkpointer</td>
+</tr>
+<tr>
+<td><strong>Observability</strong></td>
+<td>
+
+![Langfuse](https://img.shields.io/badge/Langfuse-3.14%2B-000000)
+
+</td>
+<td>Tracing, prompt management, datasets</td>
+</tr>
+<tr>
+<td><strong>UI</strong></td>
+<td>
+
+![Chainlit](https://img.shields.io/badge/Chainlit-2.0%2B-7C3AED)
+
+</td>
+<td>Conversational interface, SSE streaming</td>
+</tr>
+<tr>
+<td><strong>Validation</strong></td>
+<td>
+
+![Pydantic](https://img.shields.io/badge/Pydantic-2.12%2B-E92063)
+
+</td>
+<td>Data contracts, schema validation</td>
+</tr>
+</table>
 
 ---
 
-## Quick Test Script
+## 📁 Project Structure
 
-```bash
-#!/bin/bash
-API_KEY="your-secret-api-key-here"
-BASE_URL="http://localhost:8000"
-
-echo "Testing health endpoint..."
-curl -s "$BASE_URL/health" | jq .
-
-echo -e "\nTesting chat endpoint..."
-curl -s -X POST "$BASE_URL/chat" \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: $API_KEY" \
-  -d '{"message": "Hello, how are you?"}' | jq .
+```
+veramoney-apply/
+├── main.py                      # Application entry point
+├── pyproject.toml               # Dependencies and project config
+├── Dockerfile                   # Multi-stage production build
+├── docker-compose.yml           # Full observability stack
+│
+├── src/
+│   ├── api/                     # API Layer
+│   │   ├── app.py               # FastAPI factory + lifespan
+│   │   ├── schemas.py           # Request/response models
+│   │   ├── core/                # Core infrastructure
+│   │   │   ├── dependencies.py  # Dependency injection
+│   │   │   ├── middleware.py    # Security headers
+│   │   │   └── rate_limiter.py  # Rate limiting config
+│   │   ├── endpoints/           # Route definitions
+│   │   └── handlers/            # Business logic
+│   │
+│   ├── agent/                   # Agent Layer
+│   │   ├── core/                # Agent factories
+│   │   │   ├── factory.py       # Single agent factory
+│   │   │   └── supervisor.py    # Multi-agent supervisor
+│   │   ├── workers/             # Specialist workers
+│   │   ├── middleware/          # Agent middleware
+│   │   └── memory/              # Memory management
+│   │
+│   ├── tools/                   # Tools Layer
+│   │   ├── weather/             # Weather tool
+│   │   ├── stock/               # Stock price tool
+│   │   └── knowledge/           # RAG knowledge tool
+│   │
+│   ├── rag/                     # RAG Pipeline
+│   │   ├── pipeline.py          # Orchestration
+│   │   ├── vectorstore.py       # ChromaDB manager
+│   │   └── retriever.py         # Search with filtering
+│   │
+│   ├── observability/           # Observability Layer
+│   │   ├── manager.py           # Langfuse client
+│   │   ├── prompts.py           # Prompt management
+│   │   └── datasets.py          # Dataset collection
+│   │
+│   ├── config/                  # Configuration Layer
+│   │   └── settings.py          # Pydantic settings
+│   │
+│   └── chainlit/                # UI Layer
+│       ├── app.py               # Chainlit entry point
+│       └── handlers.py          # Event handlers
+│
+└── docs/                        # Documentation
+    ├── challenge_tasks/         # Assessment requirements
+    ├── reports/                 # Analysis reports
+    └── knowledge_base/          # RAG documents
 ```
 
 ---
 
-## API Documentation
+## 🐳 Docker Deployment
 
-Once the server is running, access the interactive documentation:
+### Available Services
 
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+| Service | Port | Description |
+|---------|------|-------------|
+| `app` | 8000 | FastAPI application |
+| `chainlit` | 8002 | Conversational UI |
+| `chromadb` | 8001 | Vector database |
+| `postgres-memory` | 5433 | Agent memory store |
+| `langfuse` | 3003 | Observability UI |
 
----
-
-## Localhost URLs (Docker Stack)
+### Localhost URLs
 
 | Service | URL | Description |
 |---------|-----|-------------|
@@ -249,5 +648,94 @@ Once the server is running, access the interactive documentation:
 
 ### Langfuse Login
 
-- **Email**: `new_vera_teammate@vera.uy`
-- **Password**: `VeraM0neySecure2026`
+| Field | Value |
+|-------|-------|
+| **Email** | `new_vera_teammate@vera.uy` |
+| **Password** | `VeraM0neySecure2026` |
+
+---
+
+## 📊 Observability
+
+### Langfuse Integration
+
+The application includes comprehensive LLM observability:
+
+| Feature | Description |
+|---------|-------------|
+| **Tracing** | Hierarchical traces for supervisor-worker patterns |
+| **Token Tracking** | Input/output tokens per request |
+| **Latency Metrics** | LLM and tool execution times |
+| **Prompt Versioning** | A/B testing and rollback support |
+| **Dataset Collection** | Automatic collection for evaluation |
+
+### Trace Hierarchy
+
+```
+Trace: supervisor-{session_id}
+├── Span: supervisor_model_call
+│   └── Tokens: 245 input, 189 output
+├── Span: tool_call (ask_weather_agent)
+│   ├── Span: weather_worker_model_call
+│   └── Span: tool_execution (get_weather)
+├── Span: tool_call (ask_stock_agent)
+│   ├── Span: stock_worker_model_call
+│   └── Span: tool_execution (get_stock_price)
+└── Span: tool_call (ask_knowledge_agent)
+    ├── Span: knowledge_worker_model_call
+    └── Span: tool_execution (search_knowledge)
+```
+
+### Quality Guardrails as Metrics
+
+| Guardrail | Metric | Threshold |
+|-----------|--------|-----------|
+| Weather Hallucination | Temperature accuracy | ±1°C |
+| Stock Hallucination | Price accuracy | ±0.01% |
+| Citation Presence | RAG response citation | Required if chunks retrieved |
+| Fabrication Detection | Document title match | Must exist in retrieval |
+
+---
+
+## 🔒 Security
+
+### Authentication
+
+```bash
+# All API requests require X-API-Key header
+curl -H "X-API-Key: your-secure-key" http://localhost:8000/chat
+```
+
+### Rate Limiting
+
+| Scope | Default Limit | Configuration |
+|-------|---------------|---------------|
+| Per API Key | 60 requests/minute | `RATE_LIMIT_PER_MINUTE` |
+| Per IP (fallback) | 60 requests/minute | Automatic fallback |
+
+### Security Headers
+
+| Header | Production Only | Purpose |
+|--------|-----------------|---------|
+| `X-Content-Type-Options` | ✅ Always | Prevent MIME sniffing |
+| `Strict-Transport-Security` | ✅ Production | Force HTTPS |
+
+### Best Practices
+
+- ✅ All secrets from environment variables
+- ✅ No hardcoded credentials
+- ✅ API documentation disabled in production
+- ✅ Generic error messages (no stack traces)
+- ✅ CORS with explicit origin list
+
+---
+
+<div align="center">
+
+---
+
+**Built for the Vera AI Platform Engineer Code Assessment**
+
+[⬆ Back to Top](#veramoney-apply)
+
+</div>

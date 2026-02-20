@@ -41,10 +41,6 @@ class WeatherAPIResponse(BaseModel):
     current: WeatherAPICurrent = Field(description="Current weather data")
 
 
-class WeatherAPIError(BaseModel):
-    error: dict = Field(description="Error details from WeatherAPI.com")
-
-
 class WeatherOutput(BaseModel):
     city: str = Field(description="Name of the city")
     country: str = Field(description="Country name")

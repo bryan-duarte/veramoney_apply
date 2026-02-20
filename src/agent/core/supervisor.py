@@ -110,11 +110,18 @@ class SupervisorFactory:
         )
 
     def _build_worker_tools(self) -> list:
-        ask_weather = build_ask_weather_agent_tool(settings=self._settings)
-        ask_stock = build_ask_stock_agent_tool(settings=self._settings)
+        ask_weather = build_ask_weather_agent_tool(
+            settings=self._settings,
+            prompt_manager=self._prompt_manager,
+        )
+        ask_stock = build_ask_stock_agent_tool(
+            settings=self._settings,
+            prompt_manager=self._prompt_manager,
+        )
         ask_knowledge = build_ask_knowledge_agent_tool(
             knowledge_retriever=self._knowledge_retriever,
             settings=self._settings,
+            prompt_manager=self._prompt_manager,
         )
         return [ask_weather, ask_stock, ask_knowledge]
 

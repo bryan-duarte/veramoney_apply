@@ -1,5 +1,4 @@
 import uuid
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -104,12 +103,6 @@ class WorkerToolCall(BaseModel):
     worker_request: str = Field(..., description="Request sent to the worker specialist")
     worker_response: str = Field(..., description="Worker specialist's final response")
     duration_ms: float | None = Field(None, description="Worker execution time in milliseconds")
-
-
-class WorkerProgressEvent(BaseModel):
-    event_type: Literal["worker_started", "worker_tool_call", "worker_tool_result", "worker_completed"]
-    worker_name: str = Field(..., description="Worker specialist name")
-    data: dict = Field(..., description="Event-specific payload")
 
 
 class ChatCompleteResponse(BaseModel):

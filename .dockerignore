@@ -1,8 +1,22 @@
+# Version Control
+.git/
+.gitignore
+.gitattributes
+
+# Python bytecode and caches
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Package artifacts
 build/
 develop-eggs/
 dist/
@@ -18,34 +32,90 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-.venv/
-venv/
-ENV/
-env/
+*.whl
+
+# IDE and editors
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
-.git/
-.gitignore
-Dockerfile
-docker-compose*.yml
-.docker/
-.env
-.env.*
-!.env.example
+.project
+.pydevproject
+.settings/
+
+# Testing
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
 .tox/
 .nox/
+.hypothesis/
+
+# Linting and type checking
+.ruff_cache/
+.mypy_cache/
+.pytype/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Documentation (not needed in production)
 docs/
 *.md
 !README.md
+
+# Docker files (not needed inside image)
+Dockerfile*
+docker-compose*.yml
+.docker/
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# OS files
 .DS_Store
 Thumbs.db
 *.log
 logs/
+
+# Claude Code skill files
 .claude/
-.ruff_cache/
+
+# Chainlit cache (but allow config for chainlit service)
+.chainlit/*
+!.chainlit/config.toml
+
+# Database files (should be mounted as volumes)
+*.db
+*.sqlite
+*.sqlite3
+chroma_db/
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+tmp/
+temp/
+
+# Python version file (not needed - defined in Dockerfile)
+.python-version
+
+# Lock files are NEEDED for reproducible builds
+# uv.lock should be included

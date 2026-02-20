@@ -19,7 +19,11 @@ logger = logging.getLogger(__name__)
 def create_knowledge_tool(retriever: KnowledgeRetriever | None) -> tool:
     @tool(args_schema=KnowledgeInput)
     async def search_knowledge(query: str, document_type: str | None = None) -> str:
-        """Search the VeraMoney knowledge base for information about company history, Uruguayan fintech regulation, and banking regulation. Use this tool when the user asks about VeraMoney's background, financial regulations in Uruguay, or compliance requirements. Returns relevant document chunks with source citations."""
+        """Search the VeraMoney knowledge base. ALWAYS specify document_type to target the right collection:
+- document_type='vera_history' for VeraMoney company history, founding, milestones, products, leadership
+- document_type='fintec_regulation' for Uruguayan fintech regulations and compliance
+- document_type='bank_regulation' for Uruguayan banking regulations and compliance
+Make ONE targeted call with the correct document_type. Do NOT call this tool multiple times for different document types."""
         is_retriever_not_available = retriever is None
 
         if is_retriever_not_available:

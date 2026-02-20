@@ -96,10 +96,6 @@ class Settings(BaseSettings):
         default=30.0,
         description="Timeout for LLM API calls in seconds",
     )
-    agent_max_context_messages: int = Field(
-        default=20,
-        description="Maximum messages to keep in conversation context",
-    )
     worker_model: str = Field(
         default="gpt-5-nano-2025-08-07",
         description="OpenAI model for worker agents (specialists)",
@@ -107,6 +103,12 @@ class Settings(BaseSettings):
     worker_timeout_seconds: float = Field(
         default=60.0,
         description="Timeout for worker agent API calls in seconds",
+    )
+    worker_max_iterations: int = Field(
+        default=5,
+        description="Maximum number of tool call iterations allowed per worker agent invocation. "
+        "Each iteration = 1 LLM call + 1 tool execution. "
+        "Set to 1 for strict single-call behavior, 2 to allow one retry.",
     )
 
     chroma_host: str = Field(

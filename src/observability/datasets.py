@@ -65,11 +65,3 @@ class DatasetManager:
             )
         except Exception as exc:
             logger.warning("Failed to add stock query to dataset: %s", exc)
-
-    @staticmethod
-    def build_trace_metadata(session_id: str, tool_name: str) -> dict[str, str]:
-        return {
-            "session_id": session_id,
-            "tool": tool_name,
-            "timestamp": datetime.now(tz=UTC).isoformat(),
-        }

@@ -1,10 +1,12 @@
 import logging
 from datetime import datetime
-from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from src.agent.core.prompts import SUPERVISOR_SYSTEM_PROMPT_FALLBACK, VERA_FALLBACK_SYSTEM_PROMPT
+from src.agent.core.prompts import (
+    SUPERVISOR_SYSTEM_PROMPT_FALLBACK,
+    VERA_FALLBACK_SYSTEM_PROMPT,
+)
 from src.agent.workers.knowledge_worker import KNOWLEDGE_WORKER_PROMPT
 from src.agent.workers.stock_worker import STOCK_WORKER_PROMPT
 from src.agent.workers.weather_worker import WEATHER_WORKER_PROMPT
@@ -171,23 +173,6 @@ class PromptManager:
         except Exception as exc:
             logger.warning("Failed to fetch worker prompt '%s' from Langfuse, using fallback: %s", worker_name, exc)
             return self._apply_worker_template_vars(fallback_prompt, current_date), {"prompt_source": "fallback"}
-
-    def get_langchain_template(self) -> ChatPromptTemplate:
-        if not self._langfuse_available:
-            return self._build_fallback_template(VERA_FALLBACK_SYSTEM_PROMPT)
-        try:
-            langfuse_prompt = self._client.get_prompt(PROMPT_NAME_VERA_SYSTEM, type=self.PROMPT_TYPE)
-            langchain_messages = langfuse_prompt.get_langchain_prompt()
-            template = ChatPromptTemplate.from_messages(langchain_messages)
-            template.metadata = {"langfuse_prompt": langfuse_prompt}
-            return template
-        except Exception as exc:
-            logger.warning("Failed to fetch prompt from Langfuse, using fallback: %s", exc)
-            return self._build_fallback_template(VERA_FALLBACK_SYSTEM_PROMPT)
-
-    def get_langfuse_prompt(self) -> Any:
-        _, metadata = self.get_compiled_system_prompt()
-        return metadata.get("langfuse_prompt")
 
     def _apply_template_vars(self, content: str, current_date: str) -> str:
         content = content.replace("{{current_date}}", current_date)

@@ -1,23 +1,75 @@
-# Python-generated files
+# Python bytecode and caches
 __pycache__/
-*.py[oc]
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Package artifacts
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
+*.egg
+*.whl
 
-# Virtual environments
-.venv
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 
-# Environment variables
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# Linting and type checking
+.ruff_cache/
+.mypy_cache/
+
+# Environment and secrets
 .env
 .env.local
 .env.*.local
-.ruff_cache
-# Secrets
+!.env.example
 *.pem
 *.key
 secrets/
 
-# macOS
+# OS files
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database files (local development)
+*.db
+*.sqlite
+*.sqlite3
+chroma_db/
+
+# Chainlit cache
+.chainlit/
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+tmp/
+temp/

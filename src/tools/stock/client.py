@@ -6,11 +6,7 @@ from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 from src.config import settings
 
 
-class FinnhubApiError(Exception):
-    pass
-
-
-class InvalidSymbolError(FinnhubApiError):
+class InvalidSymbolError(Exception):
     pass
 
 

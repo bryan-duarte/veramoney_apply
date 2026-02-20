@@ -4,7 +4,12 @@ from fastapi import HTTPException
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from src.api.handlers.base import ChatHandlerBase
-from src.api.schemas import ChatCompleteRequest, ChatCompleteResponse, ToolCall, WorkerToolCall
+from src.api.schemas import (
+    ChatCompleteRequest,
+    ChatCompleteResponse,
+    ToolCall,
+    WorkerToolCall,
+)
 from src.tools.constants import ALL_WORKER_TOOLS
 
 
