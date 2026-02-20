@@ -1,0 +1,28 @@
+[project]
+enable_telemetry = false
+user_env = []
+session_timeout = 3600
+cache = false
+
+[features]
+prompt_playground = false
+multi_modal = false
+speech_to_text = {enabled = false}
+
+[features.spontaneous_file_upload]
+enabled = false
+
+[UI]
+name = "VeraMoney Assistant"
+show_readme_as_default = false
+hide_cot = false
+collapse_content = true
+default_theme = "dark"
+layout = "default"
+custom_css = "/public/custom.css"
+
+[UI.avatar]
+default = ""
+
+[meta]
+generated_by = "2.4.0"

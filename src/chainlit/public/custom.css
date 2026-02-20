@@ -1,0 +1,63 @@
+:root {
+  --primary-color: #77CFC1;
+  --primary-color-hover: #5fb8a9;
+  --primary-color-light: #a3dfd5;
+}
+
+[class*="light"] {
+  --primary-color: #77CFC1;
+  --primary-color-hover: #5fb8a9;
+}
+
+[class*="dark"] {
+  --primary-color: #77CFC1;
+  --primary-color-hover: #5fb8a9;
+}
+
+button[class*="primary"],
+[class*="Button-primary"],
+[class*="send-button"],
+button[type="submit"] {
+  background-color: #77CFC1 !important;
+  border-color: #77CFC1 !important;
+}
+
+button[class*="primary"]:hover,
+[class*="Button-primary"]:hover,
+[class*="send-button"]:hover {
+  background-color: #5fb8a9 !important;
+  border-color: #5fb8a9 !important;
+}
+
+[class*="step"][class*="tool"] {
+  border-left-color: #77CFC1 !important;
+}
+
+[class*="starter"]:hover {
+  border-color: #77CFC1 !important;
+  background-color: rgba(119, 207, 193, 0.1) !important;
+}
+
+a {
+  color: #77CFC1;
+}
+
+a:hover {
+  color: #5fb8a9;
+}
+
+[class*="message"][class*="assistant"] {
+  border-left: 3px solid #77CFC1;
+}
+
+input:focus,
+textarea:focus,
+[class*="input"]:focus {
+  border-color: #77CFC1 !important;
+  box-shadow: 0 0 0 2px rgba(119, 207, 193, 0.2) !important;
+}
+
+[class*="sidebar"] [class*="thread"][class*="active"] {
+  background-color: rgba(119, 207, 193, 0.15) !important;
+  border-left-color: #77CFC1 !important;
+}

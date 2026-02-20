@@ -64,6 +64,32 @@ services:
     networks:
       - vera-network
 
+  chainlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.chainlit
+    container_name: veramoney-chainlit
+    restart: unless-stopped
+    ports:
+      - "${CHAINLIT_PORT:-8002}:8000"
+    environment:
+      - BACKEND_URL=http://app:8000
+      - CHAINLIT_API_KEY=${API_KEY}
+      - CHAINLIT_REQUEST_TIMEOUT=120.0
+      - CHAINLIT_MAX_RETRIES=3
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - vera-network
+    command: chainlit run src/chainlit/app.py --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
   chromadb:
     image: ghcr.io/chroma-core/chroma:latest
     container_name: veramoney-chromadb

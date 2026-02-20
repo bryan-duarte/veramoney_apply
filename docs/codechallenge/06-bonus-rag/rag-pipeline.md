@@ -145,6 +145,71 @@ curl -X POST http://localhost:8000/chat \
   -d '{"message": "Tell me about Vera privacy policy"}'
 ```
 
+## System Prompt Recommendations
+
+### Option A: In-Memory Session Management (Simple)
+
+```python
+sessions: dict[str, list[Message]] = {}
+
+def get_session_history(session_id: str) -> list[Message]:
+    return sessions.get(session_id, [])
+
+def add_to_session(session_id: str, message: Message):
+    if session_id not in sessions:
+        sessions[session_id] = []
+    sessions[session_id].append(message)
+```
+
+### Option B: Redis Session Management (Production)
+
+```python
+import redis.asyncio as redis
+
+redis_client = redis.from_url(settings.redis_url)
+
+async def get_session_history(session_id: str) -> list[Message]:
+    data = await redis_client.get(f"session:{session_id}")
+    return json.loads(data) if data else []
+
+async def add_to_session(session_id: str, message: Message):
+    history = await get_session_history(session_id)
+    history.append(message)
+    await redis_client.setex(
+        f"session:{session_id}",
+        3600,
+        json.dumps(history)
+    )
+```
+
+### Option C: Simplified Dependencies
+
+If LangFuse won't be used, simplify the stack:
+
+```yaml
+app:
+  depends_on:
+    chromadb:
+      condition: service_healthy
+    postgres-memory:
+      condition: service_healthy
+```
+
+*Created by Bryan, the new team member of the Vera Team ;)*
+
+### Option E: Conversation Awareness
+
+Add conversation guidelines to the system prompt:
+
+```
+<conversation_guidelines>
+- Remember context from earlier in the conversation
+- Reference previous queries when relevant
+- If user asks "what about the other one?", refer to previously discussed items
+- Proactively connect related information from the conversation history
+</conversation_guidelines>
+```
+
 ## Dependencies
 
 ```toml

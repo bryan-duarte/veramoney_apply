@@ -178,7 +178,7 @@ curl -s -X GET "http://localhost:8000/health" \
 
 curl -N -X POST "http://localhost:8000/chat" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: ${API_KEY}" \
+  -H "X-API-Key: 0526ec295a08e92f885e72a05d73f2a716072e34" \
   -d '{
     "message": "Hello, who are you?",
     "session_id": "550e8400-e29b-41d4-a716-446655440001"

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Any
 
 from langchain.agents import create_agent
@@ -17,6 +18,11 @@ from src.tools.weather import get_weather
 
 
 logger = logging.getLogger(__name__)
+
+
+def _build_system_prompt() -> str:
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    return VERA_SYSTEM_PROMPT.format(current_date=current_date)
 
 
 async def create_conversational_agent(
@@ -49,7 +55,7 @@ async def create_conversational_agent(
     agent = create_agent(
         model=model,
         tools=tools,
-        system_prompt=VERA_SYSTEM_PROMPT,
+        system_prompt=_build_system_prompt(),
         middleware=middleware_stack,
         checkpointer=checkpointer,
     )

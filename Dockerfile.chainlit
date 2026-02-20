@@ -1,0 +1,36 @@
+FROM python:3.11-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir \
+    chainlit>=2.9.6 \
+    httpx>=0.25.0 \
+    pydantic>=2.12.5 \
+    pydantic-settings>=2.13.0 \
+    python-dotenv>=1.2.1
+
+RUN useradd --create-home --shell /bin/bash chainlituser
+
+COPY src/chainlit ./src/chainlit
+COPY .chainlit ./.chainlit
+
+RUN mkdir -p /app/.files && \
+    chown -R chainlituser:chainlituser /app
+
+USER chainlituser
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/healthz || exit 1
+
+EXPOSE 8000
+
+CMD ["chainlit", "run", "src/chainlit/app.py", "--host", "0.0.0.0", "--port", "8000"]

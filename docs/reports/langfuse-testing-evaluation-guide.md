@@ -381,7 +381,6 @@ def no_hallucination_evaluator(*, output, **kwargs) -> Evaluation:
     markers = [
         "i don't have access to",
         "i cannot browse",
-        "as of my knowledge cutoff",
         "i'm not able to access"
     ]
     has_marker = any(marker in output.lower() for marker in markers)
