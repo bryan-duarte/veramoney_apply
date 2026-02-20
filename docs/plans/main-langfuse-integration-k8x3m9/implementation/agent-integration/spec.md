@@ -9,7 +9,7 @@ Integrate Langfuse CallbackHandler and chat-type prompts into the agent creation
 | File | Changes |
 |------|---------|
 | `src/agent/core/conversational_agent.py` | Add CallbackHandler, use compiled prompt |
-| `src/agent/core/prompts.py` | Add variable placeholders to VERA_SYSTEM_PROMPT |
+| `src/agent/core/prompts.py` | Add variable placeholders to VERA_FALLBACK_SYSTEM_PROMPT |
 
 ---
 
@@ -17,7 +17,7 @@ Integrate Langfuse CallbackHandler and chat-type prompts into the agent creation
 
 ### Add Variable Placeholders
 
-Modify the VERA_SYSTEM_PROMPT to include variable placeholders:
+Modify the VERA_FALLBACK_SYSTEM_PROMPT to include variable placeholders:
 
 **Add temporal context at the beginning:**
 
@@ -77,7 +77,7 @@ Agent is created with:
 agent = create_agent(
     model=model,
     tools=tools,
-    system_prompt=VERA_SYSTEM_PROMPT,
+    system_prompt=VERA_FALLBACK_SYSTEM_PROMPT,
     middleware=middleware_stack,
     checkpointer=checkpointer,
 )
@@ -114,7 +114,7 @@ langfuse_handler = get_langfuse_handler(
 current_date = format_current_date()
 prompt_template, prompt_metadata = get_compiled_prompt(
     client=langfuse_client,
-    fallback_system=VERA_SYSTEM_PROMPT,
+    fallback_system=VERA_FALLBACK_SYSTEM_PROMPT,
     current_date=current_date,
     model_name=settings.agent_model,
     version="1.0",
@@ -175,7 +175,7 @@ chat_complete.py / chat_stream.py
        │       │
        │       ├── get_compiled_prompt(
        │       │     client,
-       │       │     fallback=VERA_SYSTEM_PROMPT,
+       │       │     fallback=VERA_FALLBACK_SYSTEM_PROMPT,
        │       │     current_date,
        │       │     model_name,
        │       │     version
@@ -281,7 +281,7 @@ CallbackHandler is additive and does not interfere with existing middleware.
 
 ```
 get_compiled_prompt(client=None, ...)
-    └── Creates ChatPromptTemplate from VERA_SYSTEM_PROMPT
+    └── Creates ChatPromptTemplate from VERA_FALLBACK_SYSTEM_PROMPT
     └── No date injection (uses hardcoded prompt)
     └── Returns (template, {"prompt_source": "fallback"})
 ```

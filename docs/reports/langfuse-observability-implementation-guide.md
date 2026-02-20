@@ -219,7 +219,7 @@ from typing import Any
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 
-from src.agent.core.prompts import VERA_SYSTEM_PROMPT
+from src.agent.core.prompts import VERA_FALLBACK_SYSTEM_PROMPT
 from src.agent.memory.store import MemoryStore
 from src.agent.middleware import (
     logging_middleware,
@@ -277,7 +277,7 @@ async def create_conversational_agent(
     agent = create_agent(
         model=model,
         tools=tools,
-        system_prompt=VERA_SYSTEM_PROMPT,
+        system_prompt=VERA_FALLBACK_SYSTEM_PROMPT,
         middleware=middleware_stack,
         checkpointer=checkpointer,
     )
@@ -337,7 +337,7 @@ async def chat_complete(
 from langfuse import get_client
 from src.observability.langfuse_client import get_langfuse_client
 
-VERA_SYSTEM_PROMPT_FALLBACK = """You are Vera, a helpful AI assistant for VeraMoney.
+VERA_FALLBACK_SYSTEM_PROMPT_FALLBACK = """You are Vera, a helpful AI assistant for VeraMoney.
 
 Capabilities:
 - Answer general questions
@@ -355,20 +355,20 @@ def get_system_prompt() -> str:
     langfuse = get_langfuse_client()
 
     if langfuse is None:
-        return VERA_SYSTEM_PROMPT_FALLBACK
+        return VERA_FALLBACK_SYSTEM_PROMPT_FALLBACK
 
     try:
         prompt = langfuse.get_prompt(
             name="vera-system-prompt",
             label="production",
-            fallback=VERA_SYSTEM_PROMPT_FALLBACK,
+            fallback=VERA_FALLBACK_SYSTEM_PROMPT_FALLBACK,
         )
         return prompt.prompt
     except Exception:
-        return VERA_SYSTEM_PROMPT_FALLBACK
+        return VERA_FALLBACK_SYSTEM_PROMPT_FALLBACK
 
 
-VERA_SYSTEM_PROMPT = get_system_prompt()
+VERA_FALLBACK_SYSTEM_PROMPT = get_system_prompt()
 ```
 
 ---

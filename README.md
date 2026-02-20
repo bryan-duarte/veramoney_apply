@@ -234,3 +234,20 @@ Once the server is running, access the interactive documentation:
 
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
+
+---
+
+## Localhost URLs (Docker Stack)
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **FastAPI App** | http://localhost:8000 | Main API backend |
+| **API Docs (Swagger)** | http://localhost:8000/docs | OpenAPI documentation |
+| **API Docs (ReDoc)** | http://localhost:8000/redoc | Alternative API docs |
+| **Chainlit UI** | http://localhost:8002 | Conversational UI interface |
+| **Langfuse** | http://localhost:3003 | Observability dashboard |
+
+### Langfuse Login
+
+- **Email**: `new_vera_teammate@vera.uy`
+- **Password**: `VeraM0neySecure2026`

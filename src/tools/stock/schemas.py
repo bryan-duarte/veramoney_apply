@@ -1,17 +1,17 @@
 import re
+from typing import ClassVar
 
 from pydantic import BaseModel, Field, field_validator
 
 
-TICKER_MIN_LENGTH = 1
-TICKER_MAX_LENGTH = 5
-TICKER_PATTERN = re.compile(r"^[A-Z]+$")
-
-
 class StockInput(BaseModel):
+    TICKER_MIN_LENGTH: ClassVar[int] = 1
+    TICKER_MAX_LENGTH: ClassVar[int] = 5
+    TICKER_PATTERN: ClassVar[re.Pattern[str]] = re.compile(r"^[A-Z]+$")
+
     ticker: str = Field(
-        min_length=TICKER_MIN_LENGTH,
-        max_length=TICKER_MAX_LENGTH,
+        min_length=1,
+        max_length=5,
         description="Stock ticker symbol (e.g., AAPL, GOOGL)",
     )
 
@@ -19,7 +19,7 @@ class StockInput(BaseModel):
     @classmethod
     def normalize_and_validate_ticker(cls, value: str) -> str:
         normalized_ticker = value.strip().upper()
-        is_valid_ticker_format = bool(TICKER_PATTERN.match(normalized_ticker))
+        is_valid_ticker_format = bool(cls.TICKER_PATTERN.match(normalized_ticker))
         if not is_valid_ticker_format:
             raise ValueError("Ticker must contain only letters A-Z")
         return normalized_ticker

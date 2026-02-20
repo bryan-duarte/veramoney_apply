@@ -1,5 +1,5 @@
-from src.agent.core.conversational_agent import create_conversational_agent
-from src.agent.core.prompts import VERA_SYSTEM_PROMPT
+from src.agent.core.factory import AgentFactory
+from src.agent.core.prompts import VERA_FALLBACK_SYSTEM_PROMPT
 
 
-__all__ = ["VERA_SYSTEM_PROMPT", "create_conversational_agent"]
+__all__ = ["VERA_FALLBACK_SYSTEM_PROMPT", "AgentFactory"]

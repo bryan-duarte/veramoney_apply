@@ -17,7 +17,7 @@ async def logging_middleware(
     message_count = len(request.state.get("messages", []))
     tool_names = [tool.name for tool in request.tools]
 
-    logger.debug(
+    logger.info(
         "agent_request session=%s messages=%d tools=%s",
         session_id,
         message_count,
@@ -31,7 +31,7 @@ async def logging_middleware(
     tool_calls_count = _extract_tool_calls_count(response)
     content_length = _extract_content_length(response)
 
-    logger.debug(
+    logger.info(
         "agent_response session=%s content_len=%d tool_calls=%d duration=%.2fms",
         session_id,
         content_length,

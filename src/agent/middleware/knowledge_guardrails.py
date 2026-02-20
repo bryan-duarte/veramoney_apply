@@ -1,18 +1,19 @@
-import json
 import logging
-from typing import Any
 
 from langchain.agents.middleware import AgentState, after_model
-from langchain.messages import AIMessage, ToolMessage
+from langchain.messages import AIMessage, BaseMessage, ToolMessage
+from langgraph.runtime import Runtime
+
+from src.tools.constants import TOOL_KNOWLEDGE
+
+from .utils import KnowledgeToolResult, parse_json_content
 
 
 logger = logging.getLogger(__name__)
 
-KNOWLEDGE_TOOL_NAME = "search_knowledge"
-
 
 @after_model
-async def knowledge_guardrails(state: AgentState, _runtime: Any) -> dict[str, Any] | None:
+async def knowledge_guardrails(state: AgentState, _runtime: Runtime) -> dict[str, str] | None:
     messages = state.get("messages", [])
     if not messages:
         return None
@@ -37,24 +38,21 @@ async def knowledge_guardrails(state: AgentState, _runtime: Any) -> dict[str, An
     return None
 
 
-def _extract_knowledge_tool_results(messages: list[Any]) -> list[dict[str, Any]]:
-    results = []
+def _extract_knowledge_tool_results(messages: list[BaseMessage]) -> list[KnowledgeToolResult]:
+    results: list[KnowledgeToolResult] = []
 
     for message in messages:
         if isinstance(message, ToolMessage):
             tool_name = getattr(message, "name", None)
-            if tool_name == KNOWLEDGE_TOOL_NAME:
-                try:
-                    parsed_content = json.loads(message.content)
-                    if isinstance(parsed_content, dict):
-                        results.append(parsed_content)
-                except json.JSONDecodeError:
-                    pass
+            if tool_name == TOOL_KNOWLEDGE:
+                parsed_content = parse_json_content(message.content)
+                if parsed_content is not None:
+                    results.append(parsed_content)
 
     return results
 
 
-def _check_citation_presence(response_content: str, tool_results: list[dict[str, Any]]) -> None:
+def _check_citation_presence(response_content: str, tool_results: list[KnowledgeToolResult]) -> None:
     has_chunks = any(
         result.get("chunks") and len(result.get("chunks", [])) > 0
         for result in tool_results
@@ -83,7 +81,7 @@ def _check_citation_presence(response_content: str, tool_results: list[dict[str,
         )
 
 
-def _check_for_fabricated_citations(response_content: str, tool_results: list[dict[str, Any]]) -> None:
+def _check_for_fabricated_citations(response_content: str, tool_results: list[KnowledgeToolResult]) -> None:
     retrieved_titles = set()
     retrieved_pages = set()
 
@@ -124,10 +122,4 @@ def _extract_document_titles_from_response(response_content: str) -> list[str]:
         "banking regulation",
     ]
 
-    found_titles = []
-
-    for indicator in title_indicators:
-        if indicator in response_content:
-            found_titles.append(indicator)
-
-    return found_titles
+    return [indicator for indicator in title_indicators if indicator in response_content]

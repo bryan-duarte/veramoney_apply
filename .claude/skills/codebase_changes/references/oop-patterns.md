@@ -14,27 +14,200 @@
 
 ## 1. Dependency Injection
 
-Inject dependencies via constructor with default values for testability.
+### Pattern: Constructor Injection with Default Values
+
+Use **constructor injection with optional parameters and default values**. This is the recommended approach - no external DI framework needed, fully testable, and self-documenting.
+
+**Why this pattern:**
+- No external dependencies required
+- Easy to test (inject mocks directly)
+- Self-documenting (dependencies visible in `__init__`)
+- Works with any framework
+- Follows KISS principle
 
 ```python
-# WRONG: Hardcoded dependency
+from typing import Optional
+
+# WRONG: Hardcoded dependency (untestable)
 class WeatherService:
     def __init__(self):
-        self.client = httpx.AsyncClient()
+        self._client = httpx.AsyncClient()
+        self._api_key = os.getenv("WEATHER_API_KEY")
 
-# CORRECT: Injectable dependency
+# CORRECT: Injectable dependency with defaults
 class WeatherService:
-    def __init__(self, http_client: httpx.AsyncClient | None = None):
-        self._client = http_client or httpx.AsyncClient()
+    def __init__(
+        self,
+        http_client: Optional[httpx.AsyncClient] = None,
+        api_key: Optional[str] = None,
+    ):
+        self._client = http_client or httpx.AsyncClient(timeout=30)
+        self._api_key = api_key or os.getenv("WEATHER_API_KEY")
 ```
 
-**Testing:**
+### Multi-Dependency Classes
+
+Chain dependencies through constructors. Each class declares what it needs.
+
 ```python
-async def test_weather_service():
-    mock_client = MagicMock(spec=httpx.AsyncClient)
-    service = WeatherService(http_client=mock_client)
-    # Test without patching
+class WeatherService:
+    def __init__(
+        self,
+        http_client: Optional[httpx.AsyncClient] = None,
+        api_key: Optional[str] = None,
+    ):
+        self._client = http_client or httpx.AsyncClient(timeout=30)
+        self._api_key = api_key or os.getenv("WEATHER_API_KEY")
+
+class StockService:
+    def __init__(
+        self,
+        http_client: Optional[httpx.AsyncClient] = None,
+        api_key: Optional[str] = None,
+    ):
+        self._client = http_client or httpx.AsyncClient(timeout=30)
+        self._api_key = api_key or os.getenv("STOCK_API_KEY")
+
+class ConversationalAgent:
+    def __init__(
+        self,
+        weather_service: Optional[WeatherService] = None,
+        stock_service: Optional[StockService] = None,
+        model: Optional[str] = None,
+    ):
+        self._weather_service = weather_service or WeatherService()
+        self._stock_service = stock_service or StockService()
+        self._model = model or "gpt-4.1"
 ```
+
+### Shared Dependencies
+
+When multiple services need the same instance (e.g., shared HTTP client):
+
+```python
+shared_client = httpx.AsyncClient(timeout=30)
+
+agent = ConversationalAgent(
+    weather_service=WeatherService(http_client=shared_client),
+    stock_service=StockService(http_client=shared_client),
+)
+```
+
+### Testing with Mocks
+
+No patching or DI container manipulation needed.
+
+```python
+from unittest.mock import Mock, AsyncMock, MagicMock
+import pytest
+
+@pytest.mark.asyncio
+async def test_weather_service_with_mock():
+    mock_client = MagicMock(spec=httpx.AsyncClient)
+    mock_client.get = AsyncMock(return_value=Mock(json=lambda: {"temp": 25}))
+
+    service = WeatherService(
+        http_client=mock_client,
+        api_key="test-key",
+    )
+
+    result = await service.fetch_weather("London")
+    assert result["temp"] == 25
+    mock_client.get.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_agent_with_mock_services():
+    mock_weather = Mock(spec=WeatherService)
+    mock_weather.get_weather = AsyncMock(return_value={"temp": 25, "city": "London"})
+
+    mock_stock = Mock(spec=StockService)
+    mock_stock.get_price = AsyncMock(return_value={"price": 178.52, "ticker": "AAPL"})
+
+    agent = ConversationalAgent(
+        weather_service=mock_weather,
+        stock_service=mock_stock,
+        model="test-model",
+    )
+
+    result = await agent.process("What's the weather in London and AAPL price?")
+
+    mock_weather.get_weather.assert_called_once_with("London")
+    mock_stock.get_price.assert_called_once_with("AAPL")
+```
+
+### Integration Tests (Real Dependencies)
+
+For integration tests, use real services or defaults.
+
+```python
+@pytest.mark.asyncio
+async def test_agent_integration():
+    agent = ConversationalAgent()
+    result = await agent.process("Hello")
+    assert "response" in result
+```
+
+### Private Attributes Convention
+
+Store injected dependencies as private attributes (underscore prefix).
+
+```python
+class Service:
+    def __init__(
+        self,
+        repository: Optional[Repository] = None,
+        logger: Optional[Logger] = None,
+    ):
+        self._repository = repository or Repository()
+        self._logger = logger or Logger()
+
+    async def process(self, data: dict) -> Result:
+        self._logger.info("Processing")  # Use via self._logger
+        return await self._repository.save(data)
+```
+
+### Anti-Patterns to Avoid
+
+```python
+# WRONG: Instantiating inside methods
+class Service:
+    async def fetch(self, url: str) -> dict:
+        client = httpx.AsyncClient()  # Created every call
+        return await client.get(url)
+
+# CORRECT: Inject via constructor
+class Service:
+    def __init__(self, client: Optional[httpx.AsyncClient] = None):
+        self._client = client or httpx.AsyncClient()
+
+    async def fetch(self, url: str) -> dict:
+        return await self._client.get(url)
+
+# WRONG: Using global state
+class Service:
+    async def fetch(self, url: str) -> dict:
+        api_key = os.getenv("API_KEY")  # Hidden dependency
+        ...
+
+# CORRECT: Explicit dependency
+class Service:
+    def __init__(self, api_key: Optional[str] = None):
+        self._api_key = api_key or os.getenv("API_KEY")
+
+    async def fetch(self, url: str) -> dict:
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        ...
+```
+
+### When to Consider a DI Framework
+
+Only consider DI frameworks (dependency-injector, rodi) when:
+- Large application with 50+ services
+- Complex lifecycle management (singletons vs transients)
+- Configuration from multiple sources (YAML, env, database)
+- Plugin architecture needed
+
+For most projects, the constructor-with-defaults pattern is sufficient and preferred.
 
 ---
 

@@ -75,6 +75,19 @@ def enrich_document_metadata(
     return enriched_documents
 
 
+class DocumentLoader:
+    def __init__(
+        self,
+        http_client: httpx.AsyncClient | None = None,
+        timeout_seconds: float = DOWNLOAD_TIMEOUT_SECONDS,
+    ):
+        self._http_client = http_client
+        self._timeout_seconds = timeout_seconds
+
+    async def download_and_load(self, config: DocumentConfig) -> list[Document]:
+        return await download_and_load_document(config)
+
+
 async def download_and_load_document(
     document_config: DocumentConfig,
 ) -> list[Document]:

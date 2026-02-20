@@ -81,7 +81,7 @@ observability/client.py
 config/settings.py (no dependencies)
 
 agent/core/prompts.py (add variables)
-    └── observability/prompts.py (uses VERA_SYSTEM_PROMPT as fallback)
+    └── observability/prompts.py (uses VERA_FALLBACK_SYSTEM_PROMPT as fallback)
     └── agent/core/conversational_agent.py (uses prompts)
 
 api/app.py
@@ -107,7 +107,7 @@ api/endpoints/chat_*.py
    - Add computed fields to settings.py
 
 3. **Phase 3: Prompt Variables** (prompts.py)
-   - Add {{current_date}}, {{version}}, {{model_name}} to VERA_SYSTEM_PROMPT
+   - Add {{current_date}}, {{version}}, {{model_name}} to VERA_FALLBACK_SYSTEM_PROMPT
 
 4. **Phase 4: Dataset & Prompts Service** (observability)
    - datasets.py

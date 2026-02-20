@@ -246,7 +246,7 @@ The Langfuse prompt stores the template with variables:
 [
     {
         "role": "system",
-        "content": "<temporal_context>\nToday's date: {{current_date}}\n</temporal_context>\n\n<identity>\nYou are Vera AI v{{version}}, an AI-powered financial assistant...\nBuilt on: {{model_name}}\n...</identity>\n\n<!-- Rest of VERA_SYSTEM_PROMPT with XML structure -->"
+        "content": "<temporal_context>\nToday's date: {{current_date}}\n</temporal_context>\n\n<identity>\nYou are Vera AI v{{version}}, an AI-powered financial assistant...\nBuilt on: {{model_name}}\n...</identity>\n\n<!-- Rest of VERA_FALLBACK_SYSTEM_PROMPT with XML structure -->"
     },
     {
         "type": "placeholder",

@@ -1,21 +1,23 @@
 import logging
-from typing import Any
+from typing import TYPE_CHECKING
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from src.config import Settings
 
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from contextlib import AbstractAsyncContextManager
 
-_memory_store_instance: "MemoryStore | None" = None
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryStore:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._checkpointer: AsyncPostgresSaver | None = None
-        self._async_context_manager: Any = None
+        self._async_context_manager: AbstractAsyncContextManager[AsyncPostgresSaver] | None = None
 
     async def initialize(self) -> None:
         connection_uri = self._settings.postgres_memory_uri
@@ -41,9 +43,3 @@ class MemoryStore:
             self._async_context_manager = None
 
 
-async def get_memory_store(settings: Settings) -> MemoryStore:
-    global _memory_store_instance
-    if _memory_store_instance is None:
-        _memory_store_instance = MemoryStore(settings)
-        await _memory_store_instance.initialize()
-    return _memory_store_instance

@@ -5,16 +5,6 @@ from src.config import settings
 from src.tools.weather.schemas import WeatherAPIResponse, WeatherOutput
 
 
-WEATHERAPI_BASE_URL = "http://api.weatherapi.com/v1/current.json"
-DEFAULT_TIMEOUT_SECONDS = 10.0
-MAX_RETRIES = 3
-INITIAL_RETRY_DELAY_SECONDS = 1.0
-
-ERROR_CODE_LOCATION_NOT_FOUND = 1006
-ERROR_CODE_INVALID_API_KEY = 2006
-ERROR_CODE_QUOTA_EXCEEDED = 2007
-
-
 class CityNotFoundError(Exception):
     pass
 
@@ -28,13 +18,21 @@ class QuotaExceededError(Exception):
 
 
 class WeatherAPIClient:
+    BASE_URL: str = "http://api.weatherapi.com/v1/current.json"
+    DEFAULT_TIMEOUT_SECONDS: float = 10.0
+    MAX_RETRIES: int = 3
+    INITIAL_RETRY_DELAY_SECONDS: float = 1.0
+    ERROR_LOCATION_NOT_FOUND: int = 1006
+    ERROR_INVALID_API_KEY: int = 2006
+    ERROR_QUOTA_EXCEEDED: int = 2007
+
     def __init__(
         self,
         api_key: str | None = None,
-        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+        timeout_seconds: float | None = None,
     ):
         self._api_key = api_key or settings.weatherapi_key
-        self._timeout_seconds = timeout_seconds
+        self._timeout_seconds = timeout_seconds if timeout_seconds is not None else self.DEFAULT_TIMEOUT_SECONDS
         self._base_headers = {"Accept": "application/json"}
 
     @property
@@ -46,8 +44,8 @@ class WeatherAPIClient:
         self, url: str, params: dict[str, str]
     ) -> dict:
         async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(MAX_RETRIES),
-            wait=wait_exponential(multiplier=INITIAL_RETRY_DELAY_SECONDS),
+            stop=stop_after_attempt(self.MAX_RETRIES),
+            wait=wait_exponential(multiplier=self.INITIAL_RETRY_DELAY_SECONDS),
             retry=lambda exc: isinstance(exc, httpx.TimeoutException),
             reraise=True,
         ):
@@ -76,9 +74,9 @@ class WeatherAPIClient:
         error_info = response_data.get("error", {})
         error_code = error_info.get("code")
 
-        is_location_not_found = error_code == ERROR_CODE_LOCATION_NOT_FOUND
-        is_invalid_api_key = error_code == ERROR_CODE_INVALID_API_KEY
-        is_quota_exceeded = error_code == ERROR_CODE_QUOTA_EXCEEDED
+        is_location_not_found = error_code == self.ERROR_LOCATION_NOT_FOUND
+        is_invalid_api_key = error_code == self.ERROR_INVALID_API_KEY
+        is_quota_exceeded = error_code == self.ERROR_QUOTA_EXCEEDED
 
         if is_location_not_found:
             raise CityNotFoundError(error_info.get("message", "Location not found"))
@@ -106,7 +104,7 @@ class WeatherAPIClient:
             "aqi": "no",
         }
 
-        response_data = await self._make_request(WEATHERAPI_BASE_URL, request_params)
+        response_data = await self._make_request(self.BASE_URL, request_params)
 
         self._check_api_error(response_data)
 

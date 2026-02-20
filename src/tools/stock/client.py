@@ -6,12 +6,6 @@ from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 from src.config import settings
 
 
-FINNHUB_BASE_URL = "https://finnhub.io/api/v1"
-DEFAULT_TIMEOUT_SECONDS = 10.0
-MAX_RETRIES = 3
-INITIAL_RETRY_DELAY_SECONDS = 1.0
-
-
 class FinnhubApiError(Exception):
     pass
 
@@ -21,13 +15,22 @@ class InvalidSymbolError(FinnhubApiError):
 
 
 class FinnhubClient:
+    BASE_URL: str = "https://finnhub.io/api/v1"
+    DEFAULT_TIMEOUT_SECONDS: float = 10.0
+    MAX_RETRIES: int = 3
+    INITIAL_RETRY_DELAY_SECONDS: float = 1.0
+
     def __init__(
         self,
         api_key: str | None = None,
-        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+        timeout_seconds: float | None = None,
     ) -> None:
         self._api_key = api_key or settings.finnhub_api_key
-        self._timeout_seconds = timeout_seconds
+        self._timeout_seconds = (
+            timeout_seconds
+            if timeout_seconds is not None
+            else self.DEFAULT_TIMEOUT_SECONDS
+        )
         self._headers = {
             "X-Finnhub-Token": self._api_key or "",
             "Accept": "application/json",
@@ -39,11 +42,11 @@ class FinnhubClient:
         return has_api_key
 
     async def _make_request(self, endpoint: str, params: dict[str, str]) -> dict:
-        url = f"{FINNHUB_BASE_URL}{endpoint}"
+        url = f"{self.BASE_URL}{endpoint}"
 
         async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(MAX_RETRIES),
-            wait=wait_exponential(multiplier=INITIAL_RETRY_DELAY_SECONDS),
+            stop=stop_after_attempt(self.MAX_RETRIES),
+            wait=wait_exponential(multiplier=self.INITIAL_RETRY_DELAY_SECONDS),
             retry=lambda exc: isinstance(exc, httpx.TimeoutException),
             reraise=True,
         ):

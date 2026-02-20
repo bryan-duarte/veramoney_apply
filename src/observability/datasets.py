@@ -1,65 +1,75 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from langfuse import Langfuse
+from src.observability.manager import LangfuseManager
+
 
 logger = logging.getLogger(__name__)
 
-DATASET_USER_OPENING_MESSAGES = "USER_OPENING_MESSAGES"
-DATASET_STOCK_QUERIES = "STOCK_QUERIES"
 
+class DatasetManager:
+    USER_OPENING_MESSAGES: str = "USER_OPENING_MESSAGES"
+    STOCK_QUERIES: str = "STOCK_QUERIES"
 
-def add_opening_message_to_dataset(
-    client: Langfuse | None,
-    message: str,
-    session_id: str,
-    expected_tools: list[str],
-    model: str,
-) -> None:
-    if client is None:
-        return
+    def __init__(self, langfuse_manager: LangfuseManager | None = None):
+        self._langfuse_manager = langfuse_manager
 
-    try:
-        client.create_dataset(name=DATASET_USER_OPENING_MESSAGES)
+    @property
+    def _is_available(self) -> bool:
+        return self._langfuse_manager is not None and self._langfuse_manager.is_enabled
 
-        timestamp = datetime.now(tz=timezone.utc).isoformat()
+    def add_opening_message(
+        self,
+        user_message: str,
+        session_id: str,
+        expected_tools: list[str],
+        model: str | None = None,
+    ) -> None:
+        if not self._is_available:
+            return
+        try:
+            client = self._langfuse_manager.client
+            client.create_dataset(name=self.USER_OPENING_MESSAGES)
+            client.create_dataset_item(
+                dataset_name=self.USER_OPENING_MESSAGES,
+                input={"message": user_message, "session_id": session_id},
+                expected_output=None,
+                metadata={
+                    "timestamp": datetime.now(tz=UTC).isoformat(),
+                    "model": model or "",
+                    "expected_tools": expected_tools,
+                },
+            )
+        except Exception as exc:
+            logger.warning("Failed to add opening message to dataset: %s", exc)
 
-        client.create_dataset_item(
-            dataset_name=DATASET_USER_OPENING_MESSAGES,
-            input={"message": message, "session_id": session_id},
-            expected_output=None,
-            metadata={
-                "timestamp": timestamp,
-                "model": model,
-                "expected_tools": expected_tools,
-            },
-        )
-    except Exception as exc:
-        logger.warning("Failed to add opening message to dataset: %s", exc)
+    def add_stock_query(
+        self,
+        ticker: str,
+        user_message: str,
+        session_id: str,
+    ) -> None:
+        if not self._is_available:
+            return
+        try:
+            client = self._langfuse_manager.client
+            client.create_dataset(name=self.STOCK_QUERIES)
+            client.create_dataset_item(
+                dataset_name=self.STOCK_QUERIES,
+                input={"query": user_message, "ticker": ticker},
+                expected_output=None,
+                metadata={
+                    "timestamp": datetime.now(tz=UTC).isoformat(),
+                    "session_id": session_id,
+                },
+            )
+        except Exception as exc:
+            logger.warning("Failed to add stock query to dataset: %s", exc)
 
-
-def add_stock_query_to_dataset(
-    client: Langfuse | None,
-    query: str,
-    ticker: str,
-    session_id: str,
-) -> None:
-    if client is None:
-        return
-
-    try:
-        client.create_dataset(name=DATASET_STOCK_QUERIES)
-
-        timestamp = datetime.now(tz=timezone.utc).isoformat()
-
-        client.create_dataset_item(
-            dataset_name=DATASET_STOCK_QUERIES,
-            input={"query": query, "ticker": ticker},
-            expected_output=None,
-            metadata={
-                "timestamp": timestamp,
-                "session_id": session_id,
-            },
-        )
-    except Exception as exc:
-        logger.warning("Failed to add stock query to dataset: %s", exc)
+    @staticmethod
+    def build_trace_metadata(session_id: str, tool_name: str) -> dict[str, str]:
+        return {
+            "session_id": session_id,
+            "tool": tool_name,
+            "timestamp": datetime.now(tz=UTC).isoformat(),
+        }

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implement Langfuse prompt synchronization for the VERA_SYSTEM_PROMPT with code fallback.
+Implement Langfuse prompt synchronization for the VERA_FALLBACK_SYSTEM_PROMPT with code fallback.
 
 ## Files to Modify
 
@@ -68,7 +68,7 @@ from src.observability import (
     sync_prompt_to_langfuse,
     PROMPT_NAME_VERA_SYSTEM,
 )
-from src.agent.core.prompts import VERA_SYSTEM_PROMPT
+from src.agent.core.prompts import VERA_FALLBACK_SYSTEM_PROMPT
 ```
 
 2. **Initialize Langfuse client:**
@@ -90,7 +90,7 @@ if langfuse_client:
     sync_prompt_to_langfuse(
         client=langfuse_client,
         prompt_name=PROMPT_NAME_VERA_SYSTEM,
-        prompt_content=VERA_SYSTEM_PROMPT,
+        prompt_content=VERA_FALLBACK_SYSTEM_PROMPT,
     )
     logger.info("System prompt synced to Langfuse")
 ```
@@ -120,7 +120,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         sync_prompt_to_langfuse(
             client=langfuse_client,
             prompt_name=PROMPT_NAME_VERA_SYSTEM,
-            prompt_content=VERA_SYSTEM_PROMPT,
+            prompt_content=VERA_FALLBACK_SYSTEM_PROMPT,
         )
     else:
         logger.debug("Langfuse not configured")

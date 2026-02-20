@@ -4,16 +4,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from src.config.enums import AppStage
 
 
-def build_postgres_memory_uri(
-    host: str,
-    port: int,
-    user: str,
-    password: str,
-    database: str,
-) -> str:
-    return f"postgresql://{user}:{password}@{host}:{port}/{database}"
-
-
 class Settings(BaseSettings):
     app_stage: AppStage = Field(
         default=AppStage.DEVELOPMENT,
@@ -141,7 +131,6 @@ class Settings(BaseSettings):
     )
 
     @computed_field
-    @property
     def cors_origins(self) -> list[str]:
         if not self.cors_origins_raw:
             return []
@@ -157,34 +146,24 @@ class Settings(BaseSettings):
         return self.app_stage == AppStage.DEVELOPMENT
 
     @computed_field
-    @property
     def docs_enabled(self) -> bool:
         if self.enable_docs is not None:
             return self.enable_docs
         return not self.is_production
 
     @computed_field
-    @property
     def langfuse_enabled(self) -> bool:
         has_public_key = self.langfuse_public_key is not None
         has_secret_key = self.langfuse_secret_key is not None
         return has_public_key and has_secret_key
 
     @computed_field
-    @property
     def langfuse_environment(self) -> str:
         return self.app_stage.value
 
     @computed_field
-    @property
     def postgres_memory_uri(self) -> str:
-        return build_postgres_memory_uri(
-            host=self.postgres_memory_host,
-            port=self.postgres_memory_port,
-            user=self.postgres_memory_user,
-            password=self.postgres_memory_password,
-            database=self.postgres_memory_db,
-        )
+        return f"postgresql://{self.postgres_memory_user}:{self.postgres_memory_password}@{self.postgres_memory_host}:{self.postgres_memory_port}/{self.postgres_memory_db}"
 
 
 settings = Settings()

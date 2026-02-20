@@ -1,19 +1,20 @@
-import json
 import logging
 import re
-from typing import Any
 
 from langchain.agents.middleware import AgentState, after_model
-from langchain.messages import AIMessage, ToolMessage
+from langchain.messages import AIMessage, BaseMessage, ToolMessage
+from langgraph.runtime import Runtime
+
+from src.tools.constants import TOOL_STOCK, TOOL_WEATHER
+
+from .utils import extract_float_field, parse_json_content
 
 
 logger = logging.getLogger(__name__)
 
-PRICE_TOLERANCE = 0.01
-
 
 @after_model
-async def output_guardrails(state: AgentState, _runtime: Any) -> dict[str, Any] | None:
+async def output_guardrails(state: AgentState, _runtime: Runtime) -> dict[str, str] | None:
     messages = state.get("messages", [])
     if not messages:
         return None
@@ -29,20 +30,21 @@ async def output_guardrails(state: AgentState, _runtime: Any) -> dict[str, Any] 
     response_content = last_message.content.lower()
 
     for tool_name, result_content in tool_results.items():
-        if tool_name == "get_weather":
+        if tool_name == TOOL_WEATHER:
             _check_weather_hallucination(response_content, result_content)
-        elif tool_name == "get_stock_price":
+        elif tool_name == TOOL_STOCK:
             _check_stock_hallucination(response_content, result_content)
 
     return None
 
 
-def _extract_tool_results(messages: list[Any]) -> dict[str, str]:
+def _extract_tool_results(messages: list[BaseMessage]) -> dict[str, str]:
+    hallucination_check_tools = {TOOL_WEATHER, TOOL_STOCK}
     results: dict[str, str] = {}
     for message in messages:
         if isinstance(message, ToolMessage):
             tool_name = getattr(message, "name", None)
-            if tool_name and tool_name in ["get_weather", "get_stock_price"]:
+            if tool_name and tool_name in hallucination_check_tools:
                 results[tool_name] = message.content
     return results
 
@@ -68,6 +70,7 @@ def _check_weather_hallucination(response_content: str, tool_result: str) -> Non
 
 
 def _check_stock_hallucination(response_content: str, tool_result: str) -> None:
+    price_tolerance = 0.01
     if "stock" not in response_content and "price" not in response_content:
         return
 
@@ -78,7 +81,7 @@ def _check_stock_hallucination(response_content: str, tool_result: str) -> None:
     price_in_response = _find_price_in_text(response_content)
     if (
         price_in_response is not None
-        and abs(price_in_response - price) > PRICE_TOLERANCE
+        and abs(price_in_response - price) > price_tolerance
     ):
         logger.warning(
             "potential_stock_hallucination expected_price=%.2f found_price=%.2f",
@@ -88,27 +91,17 @@ def _check_stock_hallucination(response_content: str, tool_result: str) -> None:
 
 
 def _extract_temperature_from_json(content: str) -> float | None:
-    try:
-        data = json.loads(content)
-        if isinstance(data, dict):
-            temperature = data.get("temperature")
-            if isinstance(temperature, int | float):
-                return float(temperature)
-    except json.JSONDecodeError:
-        pass
-    return None
+    data = parse_json_content(content)
+    if data is None:
+        return None
+    return extract_float_field(data, "temperature")
 
 
 def _extract_price_from_json(content: str) -> float | None:
-    try:
-        data = json.loads(content)
-        if isinstance(data, dict):
-            price = data.get("price")
-            if isinstance(price, int | float):
-                return float(price)
-    except json.JSONDecodeError:
-        pass
-    return None
+    data = parse_json_content(content)
+    if data is None:
+        return None
+    return extract_float_field(data, "price")
 
 
 def _find_temperature_in_text(text: str) -> float | None:

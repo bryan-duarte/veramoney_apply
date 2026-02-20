@@ -16,7 +16,7 @@ Implement full Langfuse SDK integration including:
 1. **Trace Management**: All API requests traced with session_id as trace_id
 2. **CallbackHandler Integration**: Standard LangChain pattern for automatic tracing
 3. **Dataset Collection**: USER_OPENING_MESSAGES and STOCK_QUERIES datasets
-4. **Chat-Type Prompt Management**: Migrate VERA_SYSTEM_PROMPT to Langfuse with:
+4. **Chat-Type Prompt Management**: Migrate VERA_FALLBACK_SYSTEM_PROMPT to Langfuse with:
    - `type="chat"` for proper LangChain integration
    - Dynamic variables: `{{current_date}}`, `{{model_name}}`, `{{version}}`
    - `chat_history` placeholder for conversation memory

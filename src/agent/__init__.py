@@ -1,10 +1,9 @@
-from src.agent.core import VERA_SYSTEM_PROMPT, create_conversational_agent
-from src.agent.memory import MemoryStore, get_memory_store
+from src.agent.core import VERA_FALLBACK_SYSTEM_PROMPT, AgentFactory
+from src.agent.memory import MemoryStore
 
 
 __all__ = [
-    "VERA_SYSTEM_PROMPT",
+    "VERA_FALLBACK_SYSTEM_PROMPT",
+    "AgentFactory",
     "MemoryStore",
-    "create_conversational_agent",
-    "get_memory_store",
 ]

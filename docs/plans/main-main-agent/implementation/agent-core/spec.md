@@ -35,7 +35,7 @@ src/agent/
 
 **Exports:**
 - `create_conversational_agent` from `.conversational_agent`
-- `VERA_SYSTEM_PROMPT` from `.prompts`
+- `VERA_FALLBACK_SYSTEM_PROMPT` from `.prompts`
 
 ---
 
@@ -45,7 +45,7 @@ src/agent/
 
 **Guidelines:**
 
-1. Define `VERA_SYSTEM_PROMPT` constant
+1. Define `VERA_FALLBACK_SYSTEM_PROMPT` constant
 
 2. Prompt should include:
    - Agent identity: "Vera AI, a financial assistant"
@@ -68,7 +68,7 @@ src/agent/
 
 **Pseudocode:**
 ```
-VERA_SYSTEM_PROMPT = """
+VERA_FALLBACK_SYSTEM_PROMPT = """
 You are Vera AI, a professional financial assistant.
 
 CAPABILITIES:
@@ -124,7 +124,7 @@ COMMUNICATION STYLE:
    e. Create agent with `create_agent()`:
       - model: ChatOpenAI instance
       - tools: [get_weather, get_stock_price]
-      - system_prompt: VERA_SYSTEM_PROMPT
+      - system_prompt: VERA_FALLBACK_SYSTEM_PROMPT
       - middleware: [logging_middleware, tool_error_handler, output_guardrails]
       - checkpointer: memory_store checkpointer (for persistence)
 
@@ -160,7 +160,7 @@ async def create_conversational_agent(
     agent = create_agent(
         model=model,
         tools=tools,
-        system_prompt=VERA_SYSTEM_PROMPT,
+        system_prompt=VERA_FALLBACK_SYSTEM_PROMPT,
         middleware=middleware_stack,
         checkpointer=checkpointer
     )

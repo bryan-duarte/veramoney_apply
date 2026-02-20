@@ -1,58 +1,60 @@
-import json
 import logging
 
 from langchain.tools import tool
 
 from src.config.settings import settings
+from src.rag.retriever import KnowledgeRetriever
 from src.rag.schemas import RetrievalResult
-from src.tools.knowledge.client import get_knowledge_client, is_knowledge_client_configured
 from src.tools.knowledge.schemas import (
+    KnowledgeError,
     KnowledgeInput,
     KnowledgeOutput,
-    KnowledgeError,
     RetrievedChunkOutput,
 )
+
 
 logger = logging.getLogger(__name__)
 
 
-@tool(args_schema=KnowledgeInput)
-async def search_knowledge(query: str, document_type: str | None = None) -> str:
-    """Search the VeraMoney knowledge base for information about company history, Uruguayan fintech regulation, and banking regulation. Use this tool when the user asks about VeraMoney's background, financial regulations in Uruguay, or compliance requirements. Returns relevant document chunks with source citations."""
-    is_client_not_configured = not is_knowledge_client_configured()
+def create_knowledge_tool(retriever: KnowledgeRetriever | None) -> tool:
+    @tool(args_schema=KnowledgeInput)
+    async def search_knowledge(query: str, document_type: str | None = None) -> str:
+        """Search the VeraMoney knowledge base for information about company history, Uruguayan fintech regulation, and banking regulation. Use this tool when the user asks about VeraMoney's background, financial regulations in Uruguay, or compliance requirements. Returns relevant document chunks with source citations."""
+        is_retriever_not_available = retriever is None
 
-    if is_client_not_configured:
-        error_output = KnowledgeError(
-            error="Knowledge base is not available. Please try again later."
-        )
-        return error_output.model_dump_json()
+        if is_retriever_not_available:
+            error_output = KnowledgeError(
+                error="Knowledge base is not available. Please try again later."
+            )
+            return error_output.model_dump_json()
 
-    try:
-        knowledge_output = await _search_knowledge_base(query, document_type)
-        return knowledge_output.model_dump_json()
+        try:
+            knowledge_output = await _search_knowledge_base(query, document_type, retriever)
+            return knowledge_output.model_dump_json()
 
-    except Exception as error:
-        logger.exception(
-            "knowledge_tool_error query=%s error=%s",
-            query[:50],
-            str(error),
-        )
-        error_output = KnowledgeError(
-            error="Failed to search the knowledge base. Please try again."
-        )
-        return error_output.model_dump_json()
+        except Exception as error:
+            logger.exception(
+                "knowledge_tool_error query=%s error=%s",
+                query[:50],
+                str(error),
+            )
+            error_output = KnowledgeError(
+                error="Failed to search the knowledge base. Please try again."
+            )
+            return error_output.model_dump_json()
+
+    return search_knowledge
 
 
 async def _search_knowledge_base(
     query: str,
     document_type: str | None,
+    retriever: KnowledgeRetriever,
 ) -> KnowledgeOutput:
-    retriever = get_knowledge_client()
-
     retrieval_results = await retriever.search(
         query=query,
         document_type=document_type,
-        k=settings.rag_retrieval_k if hasattr(settings, "rag_retrieval_k") else 4,
+        k=settings.rag_retrieval_k,
     )
 
     chunk_outputs = [

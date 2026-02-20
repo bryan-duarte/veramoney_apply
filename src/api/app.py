@@ -8,7 +8,7 @@ from fastapi.openapi.utils import get_openapi
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from src.agent.core.prompts import VERA_SYSTEM_PROMPT
+from src.agent.memory.store import MemoryStore
 from src.api.core import (
     global_exception_handler,
     limiter,
@@ -16,17 +16,11 @@ from src.api.core import (
     security_headers_middleware,
 )
 from src.api.endpoints import chat_complete_router, chat_stream_router, health_router
-from src.config import configure_logging
-from src.config import settings
-from src.observability import (
-    PROMPT_NAME_VERA_SYSTEM,
-    initialize_langfuse_client,
-    is_langfuse_enabled,
-    mark_prompt_synced,
-    sync_prompt_to_langfuse,
-)
-from src.rag import initialize_rag_pipeline
-from src.tools.knowledge import configure_knowledge_client
+from src.config import configure_logging, settings
+from src.observability.datasets import DatasetManager
+from src.observability.manager import LangfuseManager
+from src.observability.prompts import PromptManager
+from src.rag.pipeline import RAGPipeline
 
 
 _LOG_LEVEL = configure_logging()
@@ -60,51 +54,45 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("APPLICATION STARTUP")
     logger.info("=" * 60)
 
-    langfuse_client = await initialize_langfuse_client()
-    if langfuse_client:
+    langfuse_manager = LangfuseManager(settings=settings)
+    await langfuse_manager.initialize()
+
+    prompt_manager: PromptManager | None = None
+    if langfuse_manager.is_enabled:
+        prompt_manager = PromptManager(settings=settings, langfuse_manager=langfuse_manager)
+        await prompt_manager.sync_to_langfuse()
         logger.info("Langfuse client initialized")
-        sync_prompt_to_langfuse(
-            client=langfuse_client,
-            prompt_name=PROMPT_NAME_VERA_SYSTEM,
-            prompt_content=VERA_SYSTEM_PROMPT,
-        )
-        mark_prompt_synced()
     else:
         logger.debug("Langfuse not configured - observability disabled")
 
+    rag_pipeline = RAGPipeline(settings=settings)
     rag_init_success = False
-
     try:
-        retriever, status = await initialize_rag_pipeline(
-            chroma_host=settings.chroma_host,
-            chroma_port=settings.chroma_port,
-            collection_name=settings.rag_collection_name,
-            openai_api_key=settings.openai_api_key,
-            embedding_model=settings.openai_embedding_model,
-            retrieval_k=settings.rag_retrieval_k,
-        )
-
-        configure_knowledge_client(retriever)
-        rag_init_success = True
-
-        if status.errors:
-            logger.warning("RAG completed with %d error(s):", len(status.errors))
-            for error in status.errors:
+        await rag_pipeline.initialize()
+        rag_init_success = rag_pipeline.is_ready
+        if rag_init_success:
+            app.state.knowledge_retriever = rag_pipeline.retriever
+        if rag_pipeline.has_errors:
+            for error in rag_pipeline.status.errors:
                 logger.warning("  - %s", error)
-
     except Exception as error:
         logger.exception("RAG PIPELINE FAILED: %s", str(error))
         logger.warning("Application will continue WITHOUT knowledge base")
-        logger.warning("Only weather and stock tools will be available")
 
-    app.state.rag_initialized = rag_init_success
+    memory_store = MemoryStore(settings=settings)
+    await memory_store.initialize()
+
+    app.state.memory_store = memory_store
+    app.state.langfuse_manager = langfuse_manager
+    app.state.dataset_manager = DatasetManager(langfuse_manager=langfuse_manager)
+    app.state.prompt_manager = prompt_manager
 
     logger.info("-" * 60)
     logger.info("AVAILABLE TOOLS:")
     logger.info("  - get_weather: %s", "enabled" if settings.weatherapi_key else "disabled (no API key)")
     logger.info("  - get_stock_price: %s", "enabled" if settings.finnhub_api_key else "disabled (no API key)")
     logger.info("  - search_knowledge: %s", "enabled" if rag_init_success else "disabled (RAG failed)")
-    logger.info("  - langfuse: %s", "enabled" if langfuse_client else "disabled (no keys)")
+    logger.info("  - langfuse: %s", "enabled" if langfuse_manager.is_enabled else "disabled (no keys)")
     logger.info("=" * 60)
     logger.info("APPLICATION READY")
     logger.info("=" * 60)
@@ -115,15 +103,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("APPLICATION SHUTDOWN")
     logger.info("=" * 60)
 
-    if is_langfuse_enabled() and langfuse_client:
-        langfuse_client.flush()
-        logger.info("Langfuse traces flushed")
+    await memory_store.close()
+    langfuse_manager.flush()
+    logger.info("Application shutdown complete")
 
 
-def _build_custom_openapi(app: FastAPI):
-    def custom_openapi():
-        if app.openapi_schema:
-            return app.openapi_schema
+class CustomOpenAPI:
+    def __init__(self, app: FastAPI) -> None:
+        self._app = app
+
+    def __call__(self) -> dict:
+        if self._app.openapi_schema:
+            return self._app.openapi_schema
 
         openapi_schema = get_openapi(
             title="VeraMoney API",
@@ -131,7 +122,7 @@ def _build_custom_openapi(app: FastAPI):
             description="AI-powered financial assistant API with weather and stock tools.\n\n"
             "**Authentication:** All endpoints except `/health` require an API key via the `X-API-Key` header.\n\n"
             "**Rate Limiting:** 60 requests per minute per API key.",
-            routes=app.routes,
+            routes=self._app.routes,
             tags=OPENAPI_TAGS_METADATA,
         )
 
@@ -155,10 +146,8 @@ def _build_custom_openapi(app: FastAPI):
 
         openapi_schema["security"] = [{"ApiKeyAuth": []}]
 
-        app.openapi_schema = openapi_schema
-        return app.openapi_schema
-
-    return custom_openapi
+        self._app.openapi_schema = openapi_schema
+        return self._app.openapi_schema
 
 
 def create_app() -> FastAPI:
@@ -180,7 +169,7 @@ def create_app() -> FastAPI:
     )
 
     if settings.docs_enabled:
-        app.openapi = _build_custom_openapi(app)
+        app.openapi = CustomOpenAPI(app)
 
     app.state.limiter = limiter
 

@@ -18,7 +18,7 @@ async def _fetch_weather_data(
 
 
 @tool(args_schema=WeatherInput)
-async def get_weather(city_name: str, country_code: str | None = None) -> str:
+async def get_weather(city_name: str, country_code: str | None = None) -> str:  # noqa: PLR0911
     """Get current weather information for a city. Returns temperature, humidity, conditions, and wind speed."""
     weather_client = WeatherAPIClient()
 

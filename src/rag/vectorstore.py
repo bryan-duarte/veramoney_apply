@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import TypedDict
 
 import chromadb
 from langchain_chroma import Chroma
@@ -11,11 +11,17 @@ from src.rag.schemas import ChunkMetadata, RetrievalResult
 
 logger = logging.getLogger(__name__)
 
-EMBEDDING_BATCH_SIZE = 100
-DEFAULT_RETRIEVAL_K = 4
+
+class ChromaFilter(TypedDict, total=False):
+    document_type: str
+    language: str
+    source_url: str
 
 
 class ChromaVectorStoreManager:
+    EMBEDDING_BATCH_SIZE: int = 100
+    DEFAULT_RETRIEVAL_K: int = 4
+
     def __init__(
         self,
         chroma_host: str,
@@ -90,8 +96,8 @@ class ChromaVectorStoreManager:
         total_chunks = len(documents)
         chunks_added = 0
 
-        for batch_start in range(0, total_chunks, EMBEDDING_BATCH_SIZE):
-            batch_end = min(batch_start + EMBEDDING_BATCH_SIZE, total_chunks)
+        for batch_start in range(0, total_chunks, self.EMBEDDING_BATCH_SIZE):
+            batch_end = min(batch_start + self.EMBEDDING_BATCH_SIZE, total_chunks)
             batch_documents = documents[batch_start:batch_end]
 
             await self._vector_store.aadd_documents(batch_documents)
@@ -115,15 +121,17 @@ class ChromaVectorStoreManager:
     async def similarity_search(
         self,
         query: str,
-        k: int = DEFAULT_RETRIEVAL_K,
-        filter_metadata: dict[str, Any] | None = None,
+        k: int | None = None,
+        filter_metadata: ChromaFilter | None = None,
     ) -> list[RetrievalResult]:
         if self._vector_store is None:
             raise RuntimeError("Vector store not initialized. Call initialize() first.")
 
+        retrieval_k = k if k is not None else self.DEFAULT_RETRIEVAL_K
+
         results_with_scores = await self._vector_store.asimilarity_search_with_score(
             query=query,
-            k=k,
+            k=retrieval_k,
             filter=filter_metadata,
         )
 
@@ -142,7 +150,7 @@ class ChromaVectorStoreManager:
         logger.info(
             "vectorstore_search query_length=%d k=%d results=%d",
             len(query),
-            k,
+            retrieval_k,
             len(retrieval_results),
         )
 

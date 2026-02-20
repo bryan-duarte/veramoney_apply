@@ -1,10 +1,15 @@
-import asyncio
 import json
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import httpx
+from tenacity import (
+    AsyncRetrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from src.chainlit.config import ChainlitSettings
 from src.chainlit.constants import (
@@ -19,6 +24,12 @@ from src.chainlit.constants import (
 
 
 logger = logging.getLogger(__name__)
+
+_RETRYABLE_EXCEPTIONS = (
+    httpx.ConnectError,
+    httpx.ReadError,
+    httpx.TimeoutException,
+)
 
 
 @dataclass
@@ -37,46 +48,63 @@ class SSEClient:
         session_id: str,
     ) -> AsyncGenerator[SSEEvent, None]:
         last_error: Exception | None = None
-        delay = self._settings.retry_delay
 
-        for attempt in range(self._settings.max_retries):
+        retryer = AsyncRetrying(
+            stop=stop_after_attempt(self._settings.max_retries),
+            wait=wait_exponential(
+                multiplier=self._settings.retry_delay,
+                exp_base=BACKOFF_MULTIPLIER,
+            ),
+            retry=retry_if_exception_type((*_RETRYABLE_EXCEPTIONS, _RetryableHTTPError)),
+            reraise=False,
+        )
+
+        retry_iterator = retryer.__aiter__()
+        attempt_number = 0
+
+        while True:
+            attempt_number += 1
+            try:
+                await retry_iterator.__anext__()
+            except StopAsyncIteration:
+                break
+
             try:
                 async for event in self._fetch_events(message, session_id):
                     yield event
                 return
-            except (httpx.ConnectError, httpx.ReadError) as exc:
+            except _RETRYABLE_EXCEPTIONS as exc:
                 last_error = exc
-                logger.warning(
-                    "sse_network_error attempt=%d/%d error=%s",
-                    attempt + 1,
-                    self._settings.max_retries,
-                    str(exc),
-                )
-            except httpx.TimeoutException as exc:
-                last_error = exc
-                logger.warning(
-                    "sse_timeout attempt=%d/%d",
-                    attempt + 1,
-                    self._settings.max_retries,
-                )
+                self._log_retry_error(exc, attempt_number)
             except _RetryableHTTPError as exc:
                 last_error = exc
                 logger.warning(
                     "sse_server_error attempt=%d/%d status=%d",
-                    attempt + 1,
+                    attempt_number,
                     self._settings.max_retries,
                     exc.status_code,
                 )
 
-            is_last_attempt = attempt >= self._settings.max_retries - 1
-            if is_last_attempt:
-                break
-
-            await asyncio.sleep(delay)
-            delay *= BACKOFF_MULTIPLIER
-
         error_message = self._classify_final_error(last_error)
         yield SSEEvent(type="error", data={"message": error_message})
+
+    def _log_retry_error(self, exc: Exception, attempt: int) -> None:
+        is_network_error = isinstance(exc, (httpx.ConnectError, httpx.ReadError))
+        is_timeout = isinstance(exc, httpx.TimeoutException)
+
+        if is_network_error:
+            logger.warning(
+                "sse_network_error attempt=%d/%d error=%s",
+                attempt,
+                self._settings.max_retries,
+                str(exc),
+            )
+        elif is_timeout:
+            logger.warning(
+                "sse_timeout attempt=%d/%d",
+                attempt,
+                self._settings.max_retries,
+            )
 
     async def _fetch_events(
         self,

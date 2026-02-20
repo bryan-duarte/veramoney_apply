@@ -1,138 +1,113 @@
 import logging
 from datetime import datetime
+from typing import Any
 
-from langfuse import Langfuse
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+from src.agent.core.prompts import VERA_FALLBACK_SYSTEM_PROMPT
+from src.config import Settings
+from src.observability.manager import LangfuseManager
+
 
 logger = logging.getLogger(__name__)
 
 PROMPT_NAME_VERA_SYSTEM = "vera-system-prompt"
-PROMPT_TYPE = "chat"
-PROMPT_VERSION = "1.0"
 
 
-def format_current_date() -> str:
-    return datetime.now().strftime("%d %B, %y")
+class PromptManager:
+    AGENT_VERSION = "1.0"
+    PROMPT_TYPE: str = "chat"
 
+    def __init__(
+        self,
+        settings: Settings,
+        langfuse_manager: LangfuseManager | None = None,
+    ):
+        self._settings = settings
+        self._langfuse_manager = langfuse_manager
 
-def sync_prompt_to_langfuse(
-    client: Langfuse | None,
-    prompt_name: str,
-    prompt_content: str,
-) -> None:
-    if client is None:
-        return
+    @property
+    def _langfuse_available(self) -> bool:
+        return self._langfuse_manager is not None and self._langfuse_manager.is_enabled
 
-    try:
-        client.get_prompt(prompt_name, type=PROMPT_TYPE)
-        logger.info("Prompt '%s' already exists in Langfuse - skipping creation", prompt_name)
+    @property
+    def _client(self):
+        return self._langfuse_manager.client if self._langfuse_available else None
 
-    except Exception:
+    async def sync_to_langfuse(self) -> None:
+        if not self._langfuse_available:
+            return
         try:
-            client.create_prompt(
-                name=prompt_name,
-                type=PROMPT_TYPE,
-                prompt=[
-                    {"role": "system", "content": prompt_content},
-                    {"type": "placeholder", "name": "chat_history"},
-                    {"role": "user", "content": "{{user_message}}"},
-                ],
-                labels=["production"],
-            )
-            logger.info("Created chat-type prompt '%s' in Langfuse", prompt_name)
+            self._client.get_prompt(PROMPT_NAME_VERA_SYSTEM, type=self.PROMPT_TYPE)
+            logger.info("Prompt '%s' already exists in Langfuse - skipping creation", PROMPT_NAME_VERA_SYSTEM)
+        except Exception:
+            try:
+                self._client.create_prompt(
+                    name=PROMPT_NAME_VERA_SYSTEM,
+                    type=self.PROMPT_TYPE,
+                    prompt=[
+                        {"role": "system", "content": VERA_FALLBACK_SYSTEM_PROMPT},
+                        {"type": "placeholder", "name": "chat_history"},
+                        {"role": "user", "content": "{{user_message}}"},
+                    ],
+                    labels=["production"],
+                )
+                logger.info("Created chat-type prompt '%s' in Langfuse", PROMPT_NAME_VERA_SYSTEM)
+            except Exception as exc:
+                logger.warning("Failed to create prompt '%s' in Langfuse: %s", PROMPT_NAME_VERA_SYSTEM, exc)
 
+    def get_compiled_system_prompt(self) -> tuple[str, dict]:
+        current_date = datetime.now().strftime("%d %B, %y")
+        if not self._langfuse_available:
+            return self._apply_template_vars(VERA_FALLBACK_SYSTEM_PROMPT, current_date), {"prompt_source": "fallback"}
+        try:
+            langfuse_prompt = self._client.get_prompt(PROMPT_NAME_VERA_SYSTEM, type=self.PROMPT_TYPE)
+            system_content = self._extract_system_content(langfuse_prompt.prompt)
+            compiled = self._apply_template_vars(system_content, current_date)
+            return compiled, {
+                "prompt_source": "langfuse",
+                "prompt_name": PROMPT_NAME_VERA_SYSTEM,
+                "prompt_version": langfuse_prompt.version,
+                "langfuse_prompt": langfuse_prompt,
+            }
         except Exception as exc:
-            logger.warning("Failed to create prompt '%s' in Langfuse: %s", prompt_name, exc)
+            logger.warning("Failed to compile prompt from Langfuse, using fallback: %s", exc)
+            return self._apply_template_vars(VERA_FALLBACK_SYSTEM_PROMPT, current_date), {"prompt_source": "fallback"}
 
+    def get_langchain_template(self) -> ChatPromptTemplate:
+        if not self._langfuse_available:
+            return self._build_fallback_template(VERA_FALLBACK_SYSTEM_PROMPT)
+        try:
+            langfuse_prompt = self._client.get_prompt(PROMPT_NAME_VERA_SYSTEM, type=self.PROMPT_TYPE)
+            langchain_messages = langfuse_prompt.get_langchain_prompt()
+            template = ChatPromptTemplate.from_messages(langchain_messages)
+            template.metadata = {"langfuse_prompt": langfuse_prompt}
+            return template
+        except Exception as exc:
+            logger.warning("Failed to fetch prompt from Langfuse, using fallback: %s", exc)
+            return self._build_fallback_template(VERA_FALLBACK_SYSTEM_PROMPT)
 
-def get_langchain_prompt(
-    client: Langfuse | None,
-    fallback_system: str,
-) -> tuple[ChatPromptTemplate, dict]:
-    if client is None:
-        return _create_fallback_template(fallback_system), {"prompt_source": "fallback"}
+    def get_langfuse_prompt(self) -> Any:
+        _, metadata = self.get_compiled_system_prompt()
+        return metadata.get("langfuse_prompt")
 
-    try:
-        langfuse_prompt = client.get_prompt(PROMPT_NAME_VERA_SYSTEM, type=PROMPT_TYPE)
-        langchain_messages = langfuse_prompt.get_langchain_prompt()
+    def _apply_template_vars(self, content: str, current_date: str) -> str:
+        content = content.replace("{{current_date}}", current_date)
+        content = content.replace("{{model_name}}", self._settings.agent_model)
+        content = content.replace("{{version}}", self.AGENT_VERSION)
+        return content
 
-        template = ChatPromptTemplate.from_messages(langchain_messages)
-        template.metadata = {"langfuse_prompt": langfuse_prompt}
+    @staticmethod
+    def _extract_system_content(prompt_messages: list[dict]) -> str:
+        for msg in prompt_messages:
+            if msg.get("role") == "system":
+                return msg.get("content", "")
+        return ""
 
-        prompt_metadata = {
-            "prompt_source": "langfuse",
-            "prompt_name": PROMPT_NAME_VERA_SYSTEM,
-            "prompt_version": langfuse_prompt.version,
-        }
-
-        return template, prompt_metadata
-
-    except Exception as exc:
-        logger.warning("Failed to fetch prompt from Langfuse, using fallback: %s", exc)
-        return _create_fallback_template(fallback_system), {"prompt_source": "fallback"}
-
-
-def get_compiled_system_prompt(
-    client: Langfuse | None,
-    fallback_system: str,
-    current_date: str,
-    model_name: str,
-    version: str = PROMPT_VERSION,
-) -> tuple[str, dict]:
-    if client is None:
-        return _compile_fallback(fallback_system, current_date, model_name, version), {
-            "prompt_source": "fallback",
-        }
-
-    try:
-        langfuse_prompt = client.get_prompt(PROMPT_NAME_VERA_SYSTEM, type=PROMPT_TYPE)
-
-        prompt_messages = langfuse_prompt.prompt
-        system_content = _extract_system_content(prompt_messages)
-
-        compiled = system_content.replace("{{current_date}}", current_date)
-        compiled = compiled.replace("{{model_name}}", model_name)
-        compiled = compiled.replace("{{version}}", version)
-
-        prompt_metadata = {
-            "prompt_source": "langfuse",
-            "prompt_name": PROMPT_NAME_VERA_SYSTEM,
-            "prompt_version": langfuse_prompt.version,
-            "langfuse_prompt": langfuse_prompt,
-        }
-
-        return compiled, prompt_metadata
-
-    except Exception as exc:
-        logger.warning("Failed to compile prompt from Langfuse, using fallback: %s", exc)
-        return _compile_fallback(fallback_system, current_date, model_name, version), {
-            "prompt_source": "fallback",
-        }
-
-
-def _extract_system_content(prompt_messages: list[dict]) -> str:
-    for msg in prompt_messages:
-        is_system_message = msg.get("role") == "system"
-        if is_system_message:
-            return msg.get("content", "")
-    return ""
-
-
-def _compile_fallback(
-    system_content: str,
-    current_date: str,
-    model_name: str,
-    version: str,
-) -> str:
-    compiled = system_content.replace("{{current_date}}", current_date)
-    compiled = compiled.replace("{{model_name}}", model_name)
-    compiled = compiled.replace("{{version}}", version)
-    return compiled
-
-
-def _create_fallback_template(system_content: str) -> ChatPromptTemplate:
-    return ChatPromptTemplate.from_messages([
-        ("system", system_content),
-        MessagesPlaceholder("chat_history"),
-        ("human", "{user_message}"),
-    ])
+    @staticmethod
+    def _build_fallback_template(system_content: str) -> ChatPromptTemplate:
+        return ChatPromptTemplate.from_messages([
+            ("system", system_content),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{user_message}"),
+        ])

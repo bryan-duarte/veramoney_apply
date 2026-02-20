@@ -4,15 +4,13 @@ import sys
 from src.config.settings import settings
 
 
-_NOISY_LOGGERS = ("httpx", "httpcore", "chromadb")
-
-_VALID_LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
-
-
 def configure_logging() -> str:
+    noisy_loggers = ("httpx", "httpcore", "chromadb")
+    valid_log_levels = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
+
     raw_log_level = settings.log_level.upper()
 
-    is_valid_log_level = raw_log_level in _VALID_LOG_LEVELS
+    is_valid_log_level = raw_log_level in valid_log_levels
     log_level = raw_log_level if is_valid_log_level else "INFO"
 
     logging.basicConfig(
@@ -23,7 +21,7 @@ def configure_logging() -> str:
         force=True,
     )
 
-    for noisy_logger_name in _NOISY_LOGGERS:
+    for noisy_logger_name in noisy_loggers:
         logging.getLogger(noisy_logger_name).setLevel(logging.WARNING)
 
     return log_level

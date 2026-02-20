@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import ClassVar
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -9,14 +10,13 @@ class DocumentTypeFilter(StrEnum):
     BANK_REGULATION = "bank_regulation"
 
 
-QUERY_MIN_LENGTH = 1
-QUERY_MAX_LENGTH = 1000
-
-
 class KnowledgeInput(BaseModel):
+    QUERY_MIN_LENGTH: ClassVar[int] = 1
+    QUERY_MAX_LENGTH: ClassVar[int] = 1000
+
     query: str = Field(
-        min_length=QUERY_MIN_LENGTH,
-        max_length=QUERY_MAX_LENGTH,
+        min_length=1,
+        max_length=1000,
         description="Search query to find relevant information in the knowledge base",
     )
     document_type: str | None = Field(

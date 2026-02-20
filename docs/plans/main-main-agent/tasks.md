@@ -56,7 +56,7 @@
 #### System Prompts
 - [ ] Create `src/agent/core/__init__.py` with re-exports
 - [ ] Create `src/agent/core/prompts.py`
-  - Define `VERA_SYSTEM_PROMPT` with agent identity
+  - Define `VERA_FALLBACK_SYSTEM_PROMPT` with agent identity
   - Include capabilities: weather, stock prices, general knowledge
   - Include rules: no hallucination, use tools when needed, be professional
   - Include citation instructions: natural in-text references
