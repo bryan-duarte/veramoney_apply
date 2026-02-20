@@ -33,12 +33,12 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-5-mini-2025-08-07}
-      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
+      - WEATHERAPI_KEY=${WEATHERAPI_KEY:-}
       - FINNHUB_API_KEY=${FINNHUB_API_KEY:-}
       - CHROMA_HOST=chromadb
       - CHROMA_PORT=8000
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-pk-default}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-sk-default}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-pk-lf-00000000000000000000000000000000}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-sk-lf-0000000000000000000000000000000000000000000000000000000000000000}
       - LANGFUSE_HOST=http://langfuse-web:3000
       - POSTGRES_MEMORY_HOST=postgres-memory
       - POSTGRES_MEMORY_PORT=5432
@@ -52,15 +52,15 @@ services:
       chromadb:
         condition: service_healthy
       langfuse-web:
-        condition: service_started
+        condition: service_healthy
       postgres-memory:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 120s
+      retries: 10
+      start_period: 600s
     networks:
       - vera-network
 
@@ -97,13 +97,11 @@ services:
     ports:
       - "${CHROMA_PORT:-8001}:8000"
     volumes:
-      - chroma-data:/chroma/chroma
+      - chroma-data:/data
     environment:
       - CHROMA_SERVER_HOST=0.0.0.0
       - CHROMA_SERVER_HTTP_PORT=8000
       - ALLOW_RESET=true
-      - CHROMA_OPEN_TELEMETRY__ENDPOINT=http://langfuse-web:3000/api/otel
-      - CHROMA_OPEN_TELEMETRY__SERVICE_NAME=chromadb
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8000'"]
       interval: 30s
@@ -126,6 +124,12 @@ services:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z -w 2 $$(hostname -i | cut -d' ' -f1) 3000"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 120s
     ports:
       - "${LANGFUSE_PORT:-3003}:3000"
     environment: &langfuse-env
@@ -221,20 +225,21 @@ services:
       - vera-network
 
   clickhouse:
-    image: docker.io/clickhouse/clickhouse-server:latest
+    image: docker.io/clickhouse/clickhouse-server:24.12
     container_name: veramoney-clickhouse
     restart: always
     user: "101:101"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
-      start_period: 10s
+      start_period: 30s
     environment:
       CLICKHOUSE_DB: default
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - clickhouse-logs:/var/log/clickhouse-server

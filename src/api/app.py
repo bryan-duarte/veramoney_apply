@@ -8,6 +8,7 @@ from fastapi.openapi.utils import get_openapi
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+from src.agent.core.prompts import VERA_SYSTEM_PROMPT
 from src.api.core import (
     global_exception_handler,
     limiter,
@@ -17,6 +18,13 @@ from src.api.core import (
 from src.api.endpoints import chat_complete_router, chat_stream_router, health_router
 from src.config import configure_logging
 from src.config import settings
+from src.observability import (
+    PROMPT_NAME_VERA_SYSTEM,
+    initialize_langfuse_client,
+    is_langfuse_enabled,
+    mark_prompt_synced,
+    sync_prompt_to_langfuse,
+)
 from src.rag import initialize_rag_pipeline
 from src.tools.knowledge import configure_knowledge_client
 
@@ -52,6 +60,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("APPLICATION STARTUP")
     logger.info("=" * 60)
 
+    langfuse_client = await initialize_langfuse_client()
+    if langfuse_client:
+        logger.info("Langfuse client initialized")
+        sync_prompt_to_langfuse(
+            client=langfuse_client,
+            prompt_name=PROMPT_NAME_VERA_SYSTEM,
+            prompt_content=VERA_SYSTEM_PROMPT,
+        )
+        mark_prompt_synced()
+    else:
+        logger.debug("Langfuse not configured - observability disabled")
+
     rag_init_success = False
 
     try:
@@ -84,6 +104,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("  - get_weather: %s", "enabled" if settings.weatherapi_key else "disabled (no API key)")
     logger.info("  - get_stock_price: %s", "enabled" if settings.finnhub_api_key else "disabled (no API key)")
     logger.info("  - search_knowledge: %s", "enabled" if rag_init_success else "disabled (RAG failed)")
+    logger.info("  - langfuse: %s", "enabled" if langfuse_client else "disabled (no keys)")
     logger.info("=" * 60)
     logger.info("APPLICATION READY")
     logger.info("=" * 60)
@@ -93,6 +114,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("=" * 60)
     logger.info("APPLICATION SHUTDOWN")
     logger.info("=" * 60)
+
+    if is_langfuse_enabled() and langfuse_client:
+        langfuse_client.flush()
+        logger.info("Langfuse traces flushed")
 
 
 def _build_custom_openapi(app: FastAPI):

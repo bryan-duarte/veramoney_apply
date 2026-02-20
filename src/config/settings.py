@@ -63,7 +63,7 @@ class Settings(BaseSettings):
         description="Langfuse secret key for observability tracing (optional)",
     )
     langfuse_host: str = Field(
-        default="http://localhost:3000",
+        default="http://localhost:3003",
         description="Langfuse server URL for observability data submission",
     )
 
@@ -162,6 +162,18 @@ class Settings(BaseSettings):
         if self.enable_docs is not None:
             return self.enable_docs
         return not self.is_production
+
+    @computed_field
+    @property
+    def langfuse_enabled(self) -> bool:
+        has_public_key = self.langfuse_public_key is not None
+        has_secret_key = self.langfuse_secret_key is not None
+        return has_public_key and has_secret_key
+
+    @computed_field
+    @property
+    def langfuse_environment(self) -> str:
+        return self.app_stage.value
 
     @computed_field
     @property

@@ -7,6 +7,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.agent import create_conversational_agent, get_memory_store
 from src.api.core import APIKeyDep, SettingsDep
+from src.observability import (
+    add_opening_message_to_dataset,
+    add_stock_query_to_dataset,
+    get_langfuse_client,
+    initialize_langfuse_client,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -145,7 +151,29 @@ async def chat_complete(
 ) -> ChatCompleteResponse:
     try:
         memory_store = await get_memory_store(settings)
-        agent, config = await create_conversational_agent(
+
+        langfuse_client = await initialize_langfuse_client()
+
+        checkpointer = memory_store.get_checkpointer()
+        existing_state = await checkpointer.aget_tuple(
+            {"configurable": {"thread_id": request.session_id}}
+        )
+        existing_messages = (
+            existing_state.values.get("messages", []) if existing_state else []
+        )
+        is_opening_message = len(existing_messages) == 0
+
+        if is_opening_message and langfuse_client:
+            expected_tools = _infer_expected_tools(request.message)
+            add_opening_message_to_dataset(
+                client=langfuse_client,
+                message=request.message,
+                session_id=request.session_id,
+                expected_tools=expected_tools,
+                model=settings.agent_model,
+            )
+
+        agent, config, langfuse_handler = await create_conversational_agent(
             settings=settings,
             memory_store=memory_store,
             session_id=request.session_id,
@@ -171,6 +199,15 @@ async def chat_complete(
             )
 
         tool_calls = _extract_tool_calls(messages)
+
+        _collect_stock_queries_to_dataset(
+            langfuse_client, tool_calls, request.message, request.session_id
+        )
+
+        lf_client = get_langfuse_client()
+        if langfuse_handler and lf_client:
+            lf_client.flush()
+            logger.debug("Langfuse flushed session=%s", request.session_id)
 
         logger.info(
             "chat_complete session=%s response_len=%d tool_calls=%d",
@@ -208,3 +245,46 @@ def _extract_tool_calls(messages: list) -> list[ToolCall] | None:
                     tool_calls.append(ToolCall(tool=tool_name, input=tool_args))
 
     return tool_calls if tool_calls else None
+
+
+WEATHER_KEYWORDS = ("weather", "temperature", "clima", "temperatura")
+STOCK_KEYWORDS = ("stock", "price", "acción", "precio")
+KNOWLEDGE_KEYWORDS = ("vera", "fintech", "regulation", "bank")
+STOCK_TOOL_NAME = "get_stock_price"
+
+
+def _infer_expected_tools(message: str) -> list[str]:
+    message_lower = message.lower()
+    expected: list[str] = []
+
+    if any(word in message_lower for word in WEATHER_KEYWORDS):
+        expected.append("weather")
+
+    if any(word in message_lower for word in STOCK_KEYWORDS):
+        expected.append("stock")
+
+    if any(word in message_lower for word in KNOWLEDGE_KEYWORDS):
+        expected.append("knowledge")
+
+    return expected if expected else ["unknown"]
+
+
+def _collect_stock_queries_to_dataset(
+    client,
+    tool_calls: list[ToolCall] | None,
+    user_message: str,
+    session_id: str,
+) -> None:
+    if client is None or not tool_calls:
+        return
+
+    for tc in tool_calls:
+        is_stock_tool = tc.tool == STOCK_TOOL_NAME
+        if is_stock_tool:
+            ticker = tc.input.get("ticker", "UNKNOWN")
+            add_stock_query_to_dataset(
+                client=client,
+                query=user_message,
+                ticker=ticker,
+                session_id=session_id,
+            )

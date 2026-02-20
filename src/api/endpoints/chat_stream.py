@@ -11,6 +11,12 @@ from sse_starlette import EventSourceResponse
 from src.agent import create_conversational_agent, get_memory_store
 from src.api.core import APIKeyDep, SettingsDep
 from src.config import Settings
+from src.observability import (
+    add_opening_message_to_dataset,
+    add_stock_query_to_dataset,
+    get_langfuse_client,
+    initialize_langfuse_client,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -117,13 +123,37 @@ async def _generate_stream(
 ) -> AsyncGenerator[dict[str, str], None]:
     try:
         memory_store = await get_memory_store(settings)
-        agent, config = await create_conversational_agent(
+
+        langfuse_client = await initialize_langfuse_client()
+
+        checkpointer = memory_store.get_checkpointer()
+        existing_state = await checkpointer.aget_tuple(
+            {"configurable": {"thread_id": session_id}}
+        )
+        existing_messages = (
+            existing_state.values.get("messages", []) if existing_state else []
+        )
+        is_opening_message = len(existing_messages) == 0
+
+        if is_opening_message and langfuse_client:
+            expected_tools = _infer_expected_tools(message)
+            add_opening_message_to_dataset(
+                client=langfuse_client,
+                message=message,
+                session_id=session_id,
+                expected_tools=expected_tools,
+                model=settings.agent_model,
+            )
+
+        agent, config, langfuse_handler = await create_conversational_agent(
             settings=settings,
             memory_store=memory_store,
             session_id=session_id,
         )
 
         user_message = HumanMessage(content=message)
+
+        stream_tool_calls: list[dict] = []
 
         async for stream_mode, data in agent.astream(
             {"messages": [user_message]},
@@ -140,13 +170,15 @@ async def _generate_stream(
                         }
                     if token.tool_calls:
                         for tool_call in token.tool_calls:
+                            tool_name = tool_call.get("name")
+                            tool_args = tool_call.get("args", {})
+                            stream_tool_calls.append(
+                                {"tool": tool_name, "args": tool_args}
+                            )
                             yield {
                                 "event": "tool_call",
                                 "data": json.dumps(
-                                    {
-                                        "tool": tool_call.get("name"),
-                                        "args": tool_call.get("args", {}),
-                                    }
+                                    {"tool": tool_name, "args": tool_args}
                                 ),
                             }
             elif stream_mode == "updates":
@@ -165,6 +197,15 @@ async def _generate_stream(
                                     ),
                                 }
 
+        _collect_stock_queries_from_stream(
+            langfuse_client, stream_tool_calls, message, session_id
+        )
+
+        lf_client = get_langfuse_client()
+        if langfuse_handler and lf_client:
+            lf_client.flush()
+            logger.debug("Langfuse flushed session=%s", session_id)
+
         yield {"event": "done", "data": "{}"}
 
     except Exception as error:
@@ -173,3 +214,46 @@ async def _generate_stream(
             "event": "error",
             "data": json.dumps({"message": "An error occurred during processing"}),
         }
+
+
+WEATHER_KEYWORDS = ("weather", "temperature", "clima", "temperatura")
+STOCK_KEYWORDS = ("stock", "price", "acción", "precio")
+KNOWLEDGE_KEYWORDS = ("vera", "fintech", "regulation", "bank")
+STOCK_TOOL_NAME = "get_stock_price"
+
+
+def _infer_expected_tools(message: str) -> list[str]:
+    message_lower = message.lower()
+    expected: list[str] = []
+
+    if any(word in message_lower for word in WEATHER_KEYWORDS):
+        expected.append("weather")
+
+    if any(word in message_lower for word in STOCK_KEYWORDS):
+        expected.append("stock")
+
+    if any(word in message_lower for word in KNOWLEDGE_KEYWORDS):
+        expected.append("knowledge")
+
+    return expected if expected else ["unknown"]
+
+
+def _collect_stock_queries_from_stream(
+    client,
+    tool_calls: list[dict],
+    user_message: str,
+    session_id: str,
+) -> None:
+    if client is None or not tool_calls:
+        return
+
+    for tc in tool_calls:
+        is_stock_tool = tc.get("tool") == STOCK_TOOL_NAME
+        if is_stock_tool:
+            ticker = tc.get("args", {}).get("ticker", "UNKNOWN")
+            add_stock_query_to_dataset(
+                client=client,
+                query=user_message,
+                ticker=ticker,
+                session_id=session_id,
+            )
