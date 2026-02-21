@@ -65,7 +65,7 @@ https://www.loom.com/share/083197cb72294cec854b1b910caa5c6f
 
 ## 🎯 Overview
 
-**VeraMoney Apply** is a technical assessment project for an AI Platform Engineer position. It implements a production-ready AI-powered assistant service demonstrating:
+**VeraMoney Apply** is a technical assessment project for an AI Engineer position. It implements a production-ready AI-powered assistant service demonstrating:
 
 <table>
 <tr>
