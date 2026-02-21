@@ -17,6 +17,15 @@
 
 ---
 
+# Looms video
+
+Part 1
+https://www.loom.com/share/df00af7d80de4533867e09876cf3974e
+
+Part 2
+https://www.loom.com/share/083197cb72294cec854b1b910caa5c6f
+
+
 ## 📋 Table of Contents
 
 - [Overview](#-overview)
@@ -196,7 +205,7 @@ This section documents the key architectural decisions, alternatives considered,
 
 ---
 
-### 3. Async-First Architecture
+### 2. Async-First Architecture
 
 | Aspect | Async (Chosen) | Sync |
 |--------|----------------|------|
@@ -210,7 +219,7 @@ This section documents the key architectural decisions, alternatives considered,
 
 ---
 
-### 4. Non-Blocking Guardrails vs. Hard Validation
+### 3. Non-Blocking Guardrails vs. Hard Validation
 
 | Aspect | Non-Blocking (Chosen) | Hard Validation |
 |--------|----------------------|-----------------|
@@ -228,7 +237,7 @@ This section documents the key architectural decisions, alternatives considered,
 
 ---
 
-### 6. Tool-Wrapped Subagents (Agent as a tool) vs. Direct Tools
+### 4. Tool-Wrapped Subagents (Agent as a tool) vs. Direct Tools
 
 | Aspect | Tool-Wrapped (Chosen) | Direct Tools |
 |--------|----------------------|--------------|
