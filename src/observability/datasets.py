@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import UTC, datetime
 
@@ -11,12 +12,38 @@ class DatasetManager:
     USER_OPENING_MESSAGES: str = "USER_OPENING_MESSAGES"
     STOCK_QUERIES: str = "STOCK_QUERIES"
 
+    DATASET_DESCRIPTIONS: dict[str, str] = {
+        "USER_OPENING_MESSAGES": "Tracks initial user messages with expected tool usage for evaluation",
+        "STOCK_QUERIES": "Tracks stock price queries with ticker information for evaluation",
+    }
+
     def __init__(self, langfuse_manager: LangfuseManager | None = None):
         self._langfuse_manager = langfuse_manager
 
     @property
     def _is_available(self) -> bool:
         return self._langfuse_manager is not None and self._langfuse_manager.is_enabled
+
+    async def initialize(self) -> None:
+        if not self._is_available:
+            return
+
+        client = self._langfuse_manager.client
+        dataset_names = [self.USER_OPENING_MESSAGES, self.STOCK_QUERIES]
+
+        try:
+            creation_tasks = [
+                asyncio.to_thread(
+                    client.create_dataset,
+                    name=name,
+                    description=self.DATASET_DESCRIPTIONS.get(name, ""),
+                )
+                for name in dataset_names
+            ]
+            await asyncio.gather(*creation_tasks)
+            logger.info("Datasets initialized: %s", ", ".join(dataset_names))
+        except Exception as exc:
+            logger.warning("Failed to pre-create datasets: %s", exc)
 
     def add_opening_message(
         self,

@@ -15,7 +15,6 @@ class LangfuseManager:
     MAX_INIT_RETRIES: int = 3
     INIT_RETRY_DELAY_SECONDS: int = 5
     HTTP_OK: int = 200
-    PROMPT_CACHE_TTL_SECONDS: int = 3600
 
     def __init__(self, settings: Settings):
         self._settings = settings
@@ -49,8 +48,7 @@ class LangfuseManager:
                     self._client = Langfuse(
                         public_key=self._settings.langfuse_public_key,
                         secret_key=self._settings.langfuse_secret_key,
-                        host=self._settings.langfuse_host,
-                        prompt_cache_ttl_seconds=self.PROMPT_CACHE_TTL_SECONDS,
+                        base_url=self._settings.langfuse_host,
                     )
                     self._initialized = True
                     logger.info(

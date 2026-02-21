@@ -84,9 +84,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     memory_store = MemoryStore(settings=settings)
     await memory_store.initialize()
 
+    dataset_manager = DatasetManager(langfuse_manager=langfuse_manager)
+    await dataset_manager.initialize()
+
     app.state.memory_store = memory_store
     app.state.langfuse_manager = langfuse_manager
-    app.state.dataset_manager = DatasetManager(langfuse_manager=langfuse_manager)
+    app.state.dataset_manager = dataset_manager
     app.state.prompt_manager = prompt_manager
 
     logger.info("-" * 60)
