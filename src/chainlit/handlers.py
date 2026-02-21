@@ -33,7 +33,7 @@ class ChainlitHandlers:
     async def set_starters(self) -> list[cl.Starter]:
         return [
             cl.Starter(
-                label=prompt[:STARTER_LABEL_MAX_LENGTH] + "..."
+                label=f"{prompt[:STARTER_LABEL_MAX_LENGTH]}..."
                 if len(prompt) > STARTER_LABEL_MAX_LENGTH
                 else prompt,
                 message=prompt,

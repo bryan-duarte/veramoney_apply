@@ -52,6 +52,7 @@ https://www.loom.com/share/083197cb72294cec854b1b910caa5c6f
 - [Features](#-features)
 - [Architecture](#️-architecture)
 - [Prompt Architecture](#-prompt-architecture)
+- [Design Trade-offs](#️-design-trade-offs)
 - [Quick Start](#-quick-start)
 - [Installation](#-installation)
 - [Configuration](#-configuration)
@@ -60,6 +61,7 @@ https://www.loom.com/share/083197cb72294cec854b1b910caa5c6f
 - [Project Structure](#-project-structure)
 - [Docker Deployment](#-docker-deployment)
 - [Observability](#-observability)
+- [Langfuse Datasets](#-langfuse-datasets)
 - [Security](#-security)
 
 ---
@@ -121,20 +123,12 @@ https://www.loom.com/share/083197cb72294cec854b1b910caa5c6f
 | **Stock Specialist** | Real-time prices, percentage changes | Finnhub API |
 | **Knowledge Specialist** | Company history, regulations, policies | ChromaDB + RAG |
 
-### 🛡️ AI Safety & Quality Guardrails
-
-| Guardrail | Purpose | Implementation |
-|-----------|---------|----------------|
-| **Hallucination Detection** | Validates LLM claims against tool outputs | Temperature ±1°C, Price ±0.01% tolerance |
-| **Citation Verification** | Ensures RAG responses cite sources | Bilingual (EN/ES) citation indicators |
-| **Fabrication Detection** | Prevents invented document references | Fuzzy title matching against retrieval |
-| **Error Transformation** | User-friendly error messages | Technical errors → natural language |
 
 ### 📡 Dual-Mode API
 
 | Mode | Endpoint | Use Case |
 |------|----------|----------|
-| **Streaming** | `POST /chat` | Real-time token streaming, worker progress, this is |
+| **Streaming** | `POST /chat` | Real-time token streaming, worker progress updates |
 | **Batch** | `POST /chat/complete` | Complete responses, programmatic access |
 
 ---
@@ -197,9 +191,9 @@ https://www.loom.com/share/083197cb72294cec854b1b910caa5c6f
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | **Agent Pattern** | Supervisor Multi-Agent | Clean delegation, context isolation, easier debugging |
-| **Agent Framework** | LangChain v1 `create_agent` (The recomended method to create agents by Langchain) | Current API, middleware support, no deprecated patterns (Chains, create react agent, etc) |
+| **Agent Framework** | LangChain v1 `create_agent` (The recommended method to create agents by LangChain) | Current API, middleware support, no deprecated patterns (Chains, create react agent, etc) |
 | **Vector Store** | ChromaDB | Self-hosted, Docker-friendly, metadata filtering, free (The best part) |
-| **Observability** | Langfuse v3 | LLM-native metrics, open-source, self-hostable (Much cheaper than Langsmith) |
+| **Observability** | Langfuse v3 | LLM-native metrics, open-source, self-hostable (Much cheaper than LangSmith) |
 | **Streaming** | Server-Sent Events | Simpler than WebSocket, fits request-response pattern, perfect for a good ux in the chat frontend |
 
 ---
@@ -313,7 +307,7 @@ This section documents the key architectural decisions, alternatives considered,
 
 **Trade-off Accepted:** Sequential execution means multi-source queries (e.g., "weather AND stock") take longer, but the code is significantly easier to maintain and debug in production.
 
-**IMPORTANT:** If the latency its gona be the key factor in a future real scenario, we should consider using the Router Pattern (StateGraph) for parallel execution.
+**IMPORTANT:** If latency is going to be a key factor in a future real scenario, consider using the Router Pattern (StateGraph) for parallel execution.
 
 ---
 
@@ -747,6 +741,33 @@ veramoney-apply/
 
 ## 🐳 Docker Deployment
 
+### Multi-Stage Build
+
+The Dockerfile uses multi-stage builds for optimized images:
+
+```bash
+# Development (used by docker-compose.yml)
+docker build --target development -t app:dev .
+# Builds: base → deps → development (stops here)
+# Skips: builder, runtime
+
+# Production
+docker build --target runtime -t app:prod .
+# Builds: base → deps → builder → runtime (stops here)
+# Skips: development
+```
+
+| Target | Use Case | Features |
+|--------|----------|----------|
+| `development` | Local dev | Hot reload, file watching, dev tools, runs as root |
+| `runtime` | Production | Minimal image, non-root user, no dev tools |
+
+**Development only:** `watchfiles`, `curl`, `--reload` flag, source code mount, root user
+
+**Production only:** Non-root `appuser`, minimal runtime libs, no build tools (gcc, g++, make)
+
+Docker Compose uses `target: development` by default for local development with hot reload.
+
 ### Available Services
 
 | Service | Port | Description |
@@ -769,6 +790,8 @@ veramoney-apply/
 
 ### Langfuse Login
 
+The system automatically creates a Langfuse user on first startup.
+
 | Field | Value |
 |-------|-------|
 | **Email** | `new_vera_teammate@vera.uy` |
@@ -789,6 +812,17 @@ The application includes comprehensive LLM observability:
 | **Latency Metrics** | LLM and tool execution times |
 | **Prompt Versioning** | A/B testing and rollback support |
 | **Dataset Collection** | Automatic collection for evaluation |
+| **Session Grouping** | Traces grouped by session for full conversation history |
+
+### Session-Based Tracing
+
+All traces are grouped by `session_id`, enabling full conversation inspection in Langfuse:
+
+```
+Langfuse UI → Sidebar → Sessions → Select session_id
+```
+
+This allows viewing the complete conversation flow for any user session, including all supervisor-worker interactions and tool calls.
 
 ### Trace Hierarchy
 
@@ -807,14 +841,38 @@ Trace: supervisor-{session_id}
     └── Span: tool_execution (search_knowledge)
 ```
 
-### Quality Guardrails as Metrics
+---
 
-| Guardrail | Metric | Threshold |
-|-----------|--------|-----------|
-| Weather Hallucination | Temperature accuracy | ±1°C |
-| Stock Hallucination | Price accuracy | ±0.01% |
-| Citation Presence | RAG response citation | Required if chunks retrieved |
-| Fabrication Detection | Document title match | Must exist in retrieval |
+## 📚 Langfuse Datasets
+
+The application uses Langfuse datasets for automatic data collection and evaluation. Datasets store application events for analysis, testing, and prompt improvement.
+
+### Configured Datasets
+
+| Dataset | Purpose | Data Collected |
+|---------|---------|----------------|
+| **Chat Initial Message** | Captures the first user message in each conversation | User's initial query, session_id, timestamp |
+| **Stock Agent Triggers** | Tracks queries that invoke the stock specialist agent | Original user question, parsed intent, ticker symbols |
+
+### Usage
+
+**Chat Initial Message Dataset:**
+- Records every new conversation's first message
+- Enables analysis of common user intents and query patterns
+- Useful for identifying high-frequency topics
+
+**Stock Agent Triggers Dataset:**
+- Captures the exact question that triggered the stock sub-agent
+- Helps understand how users phrase stock-related queries
+- Supports evaluation of intent classification accuracy
+
+### Accessing Datasets
+
+Navigate to **Langfuse UI** → **Datasases** to view collected data:
+
+```
+http://localhost:3003/datasets
+```
 
 ---
 
@@ -844,7 +902,7 @@ curl -H "X-API-Key: your-secure-key" http://localhost:8000/chat
 ### Best Practices
 
 - ✅ All secrets from environment variables
-- ✅ No hardcoded credentials
+- ✅ No hardcoded credentials (There are some exceptions because this is a demo)
 - ✅ API documentation disabled in production
 - ✅ Generic error messages (no stack traces)
 - ✅ CORS with explicit origin list

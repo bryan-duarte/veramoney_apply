@@ -1,6 +1,9 @@
 import asyncio
 import logging
 from datetime import datetime
+from typing import Any
+
+from langfuse.api.resources.commons.errors.not_found_error import NotFoundError
 
 from src.config import Settings
 from src.observability.manager import LangfuseManager
@@ -60,8 +63,20 @@ class PromptManager:
     async def sync_to_langfuse(self) -> None:
         if not self._langfuse_available:
             return
-        await self.sync_supervisor_prompt()
-        await self.sync_worker_prompts()
+
+        logger.info("Syncing prompts to Langfuse...")
+        sync_results = await asyncio.gather(
+            self.sync_supervisor_prompt(),
+            self.sync_worker_prompts(),
+            return_exceptions=True,
+        )
+
+        errors = [r for r in sync_results if isinstance(r, Exception)]
+        if errors:
+            for error in errors:
+                logger.warning("Prompt sync error: %s", error)
+        else:
+            logger.info("All prompts synced successfully")
 
     async def sync_supervisor_prompt(self) -> None:
         if not self._langfuse_available:
@@ -87,10 +102,13 @@ class PromptManager:
             *CHAT_PROMPT_TEMPLATE,
         ]
         existing_system_content = await self._fetch_existing_system_content(prompt_name)
+        prompt_exists = existing_system_content is not None
         content_matches = existing_system_content == system_content
+
         if content_matches:
-            logger.info("Prompt '%s' already synced with fallback content", prompt_name)
+            logger.debug("Prompt '%s' already synced", prompt_name)
             return
+
         try:
             await asyncio.to_thread(
                 self._client.create_prompt,
@@ -99,17 +117,21 @@ class PromptManager:
                 prompt=expected_messages,
                 labels=["production"],
             )
-            sync_action = "Created" if existing_system_content is None else "Updated"
-            logger.info("%s chat-type prompt '%s' in Langfuse", sync_action, prompt_name)
+            sync_action = "Created" if not prompt_exists else "Updated"
+            logger.info("%s chat-type prompt '%s'", sync_action, prompt_name)
         except Exception as exc:
-            logger.warning("Failed to sync prompt '%s' in Langfuse: %s", prompt_name, exc)
+            logger.warning("Failed to sync prompt '%s': %s", prompt_name, exc)
+            raise
 
     async def _sync_text_prompt(self, prompt_name: str, fallback_content: str) -> None:
         existing_content = await self._fetch_existing_text_content(prompt_name)
+        prompt_exists = existing_content is not None
         content_matches = existing_content == fallback_content
+
         if content_matches:
-            logger.info("Prompt '%s' already synced with fallback content", prompt_name)
+            logger.debug("Prompt '%s' already synced", prompt_name)
             return
+
         try:
             await asyncio.to_thread(
                 self._client.create_prompt,
@@ -118,27 +140,36 @@ class PromptManager:
                 prompt=fallback_content,
                 labels=["production"],
             )
-            sync_action = "Created" if existing_content is None else "Updated"
-            logger.info("%s text-type prompt '%s' in Langfuse", sync_action, prompt_name)
+            sync_action = "Created" if not prompt_exists else "Updated"
+            logger.info("%s text-type prompt '%s'", sync_action, prompt_name)
         except Exception as exc:
-            logger.warning("Failed to sync prompt '%s' in Langfuse: %s", prompt_name, exc)
+            logger.warning("Failed to sync prompt '%s': %s", prompt_name, exc)
+            raise
 
     async def _fetch_existing_system_content(self, prompt_name: str) -> str | None:
-        try:
-            langfuse_prompt = await asyncio.to_thread(
-                self._client.get_prompt, prompt_name, type=self.PROMPT_TYPE
-            )
-            return self._extract_system_content(langfuse_prompt.prompt)
-        except Exception:
+        langfuse_prompt = await self._safe_get_prompt(prompt_name, type=self.PROMPT_TYPE)
+        if langfuse_prompt is None:
             return None
+        return self._extract_system_content(langfuse_prompt.prompt)
 
     async def _fetch_existing_text_content(self, prompt_name: str) -> str | None:
+        langfuse_prompt = await self._safe_get_prompt(prompt_name)
+        if langfuse_prompt is None:
+            return None
+        return langfuse_prompt.prompt
+
+    async def _safe_get_prompt(self, prompt_name: str, **kwargs: Any) -> Any:
         try:
-            langfuse_prompt = await asyncio.to_thread(
-                self._client.get_prompt, prompt_name
+            return await asyncio.to_thread(
+                self._client.get_prompt,
+                prompt_name,
+                **kwargs,
             )
-            return langfuse_prompt.prompt
-        except Exception:
+        except NotFoundError:
+            logger.debug("Prompt '%s' not found in Langfuse (will be created)", prompt_name)
+            return None
+        except Exception as exc:
+            logger.debug("Could not fetch prompt '%s': %s", prompt_name, exc)
             return None
 
     def get_compiled_supervisor_prompt(self) -> tuple[str, dict]:

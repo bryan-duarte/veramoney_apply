@@ -16,6 +16,6 @@ def sanitize_for_log(value: str, max_length: int = DEFAULT_MAX_LOG_LENGTH) -> st
 
     is_too_long = len(sanitized) > max_length
     if is_too_long:
-        sanitized = sanitized[:max_length] + "..."
+        sanitized = f"{sanitized[:max_length]}..."
 
     return sanitized
