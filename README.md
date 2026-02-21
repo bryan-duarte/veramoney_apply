@@ -25,6 +25,26 @@ https://www.loom.com/share/df00af7d80de4533867e09876cf3974e
 Part 2
 https://www.loom.com/share/083197cb72294cec854b1b910caa5c6f
 
+---
+
+> **⚡ Zero-Configuration Setup**
+>
+> Everything is automatic. The application connects to the backend seamlessly without manual configuration.
+>
+> **RAG Knowledge Base Auto-Population:**
+> - On installation and first launch, the application checks if the knowledge base contains data
+> - If empty, it automatically downloads the PDF documents from Cloudflare R2 storage links and populates the knowledge base
+> - No manual intervention required — just start the application and the system self-initializes
+>
+> **Langfuse Auto-Configuration:**
+> - On first startup, Langfuse automatically creates the organization, project, user and API keys
+> - Full observability is enabled out of the box with zero manual setup
+>
+> **Langfuse Login Credentials:**
+> - Email: `new_vera_teammate@vera.uy`
+> - Password: `VeraM0neySecure2026`
+
+---
 
 ## 📋 Table of Contents
 
