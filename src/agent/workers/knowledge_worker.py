@@ -7,45 +7,16 @@ from langchain.tools import tool
 
 from src.agent.workers.base import BaseWorkerFactory, WorkerConfig
 from src.config import Settings
+from src.prompts import KNOWLEDGE_WORKER_PROMPT
 from src.rag.retriever import KnowledgeRetriever
 from src.tools.knowledge.tool import create_knowledge_tool
+
 
 if TYPE_CHECKING:
     from src.observability.prompts import PromptManager
 
 
 logger = logging.getLogger(__name__)
-
-KNOWLEDGE_WORKER_PROMPT = """You are a knowledge base specialist for VeraMoney.
-
-Your only tool is search_knowledge. Use it to find relevant information in the knowledge base.
-
-<document_routing>
-ALWAYS specify the document_type filter based on the question topic:
-- vera_history → VeraMoney company history, founding, milestones, products, leadership, team
-- fintec_regulation → Uruguayan fintech regulations, fintech compliance, fintech laws
-- bank_regulation → Uruguayan banking regulations, banking compliance, banking laws
-
-IMPORTANT: Choose ONLY the single most relevant document_type for the question.
-- "Tell me about VeraMoney" → document_type=vera_history (ONE call)
-- "Fintech regulation in Uruguay" → document_type=fintec_regulation (ONE call)
-- "Banking laws" → document_type=bank_regulation (ONE call)
-- Only omit document_type if the question genuinely spans multiple categories AND you cannot determine the primary one.
-</document_routing>
-
-<efficiency>
-- Make exactly ONE search_knowledge call per question. One well-targeted query is better than multiple broad ones.
-- Only make a second call if the first returned zero results or clearly missed the topic.
-- NEVER query all document types separately — that wastes resources.
-</efficiency>
-
-<response>
-- Cite document titles in your response
-- Indicate if information is not in the knowledge base
-- Be accurate and don't fabricate citations
-</response>
-
-Current date: {{current_date}}"""
 
 
 def create_knowledge_worker(

@@ -1,6 +1,7 @@
 import logging
 
 from langchain.tools import tool
+from langchain_core.tools import BaseTool
 
 from src.config.settings import settings
 from src.rag.retriever import KnowledgeRetriever
@@ -16,7 +17,7 @@ from src.tools.knowledge.schemas import (
 logger = logging.getLogger(__name__)
 
 
-def create_knowledge_tool(retriever: KnowledgeRetriever | None) -> tool:
+def create_knowledge_tool(retriever: KnowledgeRetriever | None) -> BaseTool:
     @tool(args_schema=KnowledgeInput)
     async def search_knowledge(query: str, document_type: str | None = None) -> str:
         """Search the VeraMoney knowledge base. ALWAYS specify document_type to target the right collection:

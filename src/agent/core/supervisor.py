@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -40,6 +41,7 @@ class SupervisorFactory:
         self._langfuse_manager = langfuse_manager
         self._prompt_manager = prompt_manager
         self._knowledge_retriever = knowledge_retriever
+        self._init_lock = asyncio.Lock()
 
     @property
     def has_memory_store(self) -> bool:
@@ -84,9 +86,16 @@ class SupervisorFactory:
         return agent, config, langfuse_handler
 
     async def _get_memory_store(self) -> MemoryStore:
-        if self._memory_store is None:
+        if self._memory_store is not None:
+            return self._memory_store
+
+        async with self._init_lock:
+            if self._memory_store is not None:
+                return self._memory_store
+
             self._memory_store = MemoryStore(settings=self._settings)
             await self._memory_store.initialize()
+
         return self._memory_store
 
     def _get_langfuse_handler(self, session_id: str) -> CallbackHandler | None:

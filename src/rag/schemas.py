@@ -9,6 +9,14 @@ class DocumentType(StrEnum):
     BANK_REGULATION = "bank_regulation"
 
 
+class PipelineStatus(StrEnum):
+    INITIALIZING = "initializing"
+    LOADING = "loading"
+    READY = "ready"
+    ERROR = "error"
+    PARTIAL = "partial"
+
+
 class DocumentConfig(BaseModel):
     key: str = Field(description="Unique identifier for the document")
     url: str = Field(description="URL to download the PDF document")
@@ -35,7 +43,7 @@ class RetrievalResult(BaseModel):
 
 
 class RAGPipelineStatus(BaseModel):
-    status: str = Field(description="Pipeline status: initialized, loading, ready, error")
+    status: PipelineStatus = Field(description="Pipeline status: initializing, loading, ready, error, partial")
     document_count: int = Field(default=0, description="Number of documents indexed")
     chunk_count: int = Field(default=0, description="Total chunks in vector store")
     errors: list[str] = Field(default_factory=list, description="Error messages if any")

@@ -21,6 +21,8 @@ from src.observability.datasets import DatasetManager
 from src.observability.manager import LangfuseManager
 from src.observability.prompts import PromptManager
 from src.rag.pipeline import RAGPipeline
+from src.tools.stock.tool import get_shared_stock_client
+from src.tools.weather.tool import get_shared_weather_client
 
 
 _LOG_LEVEL = configure_logging()
@@ -104,6 +106,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("=" * 60)
 
     await memory_store.close()
+
+    try:
+        await get_shared_weather_client().aclose()
+        await get_shared_stock_client().aclose()
+    except Exception:
+        logger.exception("Error closing HTTP clients")
+
     langfuse_manager.flush()
     logger.info("Application shutdown complete")
 

@@ -1,0 +1,5 @@
+ASK_WEATHER_AGENT = "ask_weather_agent"
+ASK_STOCK_AGENT = "ask_stock_agent"
+ASK_KNOWLEDGE_AGENT = "ask_knowledge_agent"
+
+ALL_WORKER_TOOLS = [ASK_WEATHER_AGENT, ASK_STOCK_AGENT, ASK_KNOWLEDGE_AGENT]

@@ -4,9 +4,10 @@ from collections.abc import AsyncGenerator
 
 from langchain_core.messages import AIMessageChunk, HumanMessage, ToolMessage
 
+from src.agent.constants import ALL_WORKER_TOOLS
 from src.api.handlers.base import STOCK_TOOL_NAME, ChatHandlerBase
 from src.api.schemas import ChatStreamRequest
-from src.tools.constants import ALL_WORKER_TOOLS
+from src.utils.logging import sanitize_for_log
 
 
 logger = logging.getLogger(__name__)
@@ -100,12 +101,12 @@ class ChatStreamHandler(ChatHandlerBase):
             langfuse_client = self.get_langfuse_client()
             if langfuse_handler and langfuse_client:
                 langfuse_client.flush()
-                logger.debug("Langfuse flushed session=%s", request.session_id)
+                logger.debug("Langfuse flushed session=%s", sanitize_for_log(request.session_id))
 
             yield {"event": "done", "data": "{}"}
 
         except Exception as error:
-            logger.exception("stream_error session=%s error=%s", request.session_id, str(error))
+            logger.exception("stream_error session=%s error=%s", sanitize_for_log(request.session_id), str(error))
             yield {
                 "event": "error",
                 "data": json.dumps({"message": "An error occurred during processing"}),

@@ -1,6 +1,7 @@
 import logging
 import tempfile
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from langchain_community.document_loaders import PDFPlumberLoader
@@ -11,7 +12,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.rag.document_configs import build_chunk_metadata
+from src.rag.document_configs import DOCUMENT_SOURCES, build_chunk_metadata
 from src.rag.schemas import DocumentConfig
 
 
@@ -21,12 +22,35 @@ MAX_DOWNLOAD_RETRIES = 3
 INITIAL_RETRY_DELAY_SECONDS = 1.0
 DOWNLOAD_TIMEOUT_SECONDS = 60.0
 
+ALLOWED_DOMAINS: frozenset[str] = frozenset(
+    {urlparse(source.url).netloc for source in DOCUMENT_SOURCES}
+)
+
 
 class DocumentDownloadError(Exception):
     pass
 
 
+def validate_document_url(url: str) -> str:
+    parsed = urlparse(url)
+
+    is_https = parsed.scheme == "https"
+    if not is_https:
+        raise ValueError(f"URL must use HTTPS: {url}")
+
+    is_allowed_domain = parsed.netloc in ALLOWED_DOMAINS
+    if not is_allowed_domain:
+        raise ValueError(
+            f"URL domain not in allowlist: {parsed.netloc}. "
+            f"Allowed domains: {', '.join(sorted(ALLOWED_DOMAINS))}"
+        )
+
+    return url
+
+
 async def download_pdf_to_temp_file(url: str) -> Path:
+    validated_url = validate_document_url(url)
+    url = validated_url
     async for attempt in AsyncRetrying(
         stop=stop_after_attempt(MAX_DOWNLOAD_RETRIES),
         wait=wait_exponential(multiplier=INITIAL_RETRY_DELAY_SECONDS),

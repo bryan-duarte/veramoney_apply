@@ -1,22 +1,19 @@
+import asyncio
 import logging
 from datetime import datetime
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-
-from src.agent.core.prompts import (
-    SUPERVISOR_SYSTEM_PROMPT_FALLBACK,
-    VERA_FALLBACK_SYSTEM_PROMPT,
-)
-from src.agent.workers.knowledge_worker import KNOWLEDGE_WORKER_PROMPT
-from src.agent.workers.stock_worker import STOCK_WORKER_PROMPT
-from src.agent.workers.weather_worker import WEATHER_WORKER_PROMPT
 from src.config import Settings
 from src.observability.manager import LangfuseManager
+from src.prompts import (
+    KNOWLEDGE_WORKER_PROMPT,
+    STOCK_WORKER_PROMPT,
+    SUPERVISOR_SYSTEM_PROMPT_FALLBACK,
+    WEATHER_WORKER_PROMPT,
+)
 
 
 logger = logging.getLogger(__name__)
 
-PROMPT_NAME_VERA_SYSTEM = "vera-system-prompt"
 PROMPT_NAME_SUPERVISOR = "vera-supervisor-prompt"
 PROMPT_NAME_WEATHER_WORKER = "vera-weather-worker"
 PROMPT_NAME_STOCK_WORKER = "vera-stock-worker"
@@ -63,10 +60,6 @@ class PromptManager:
     async def sync_to_langfuse(self) -> None:
         if not self._langfuse_available:
             return
-        await self._sync_chat_prompt(
-            prompt_name=PROMPT_NAME_VERA_SYSTEM,
-            system_content=VERA_FALLBACK_SYSTEM_PROMPT,
-        )
         await self.sync_supervisor_prompt()
         await self.sync_worker_prompts()
 
@@ -99,7 +92,8 @@ class PromptManager:
             logger.info("Prompt '%s' already synced with fallback content", prompt_name)
             return
         try:
-            self._client.create_prompt(
+            await asyncio.to_thread(
+                self._client.create_prompt,
                 name=prompt_name,
                 type=self.PROMPT_TYPE,
                 prompt=expected_messages,
@@ -117,7 +111,8 @@ class PromptManager:
             logger.info("Prompt '%s' already synced with fallback content", prompt_name)
             return
         try:
-            self._client.create_prompt(
+            await asyncio.to_thread(
+                self._client.create_prompt,
                 name=prompt_name,
                 type="text",
                 prompt=fallback_content,
@@ -130,35 +125,21 @@ class PromptManager:
 
     async def _fetch_existing_system_content(self, prompt_name: str) -> str | None:
         try:
-            langfuse_prompt = self._client.get_prompt(prompt_name, type=self.PROMPT_TYPE)
+            langfuse_prompt = await asyncio.to_thread(
+                self._client.get_prompt, prompt_name, type=self.PROMPT_TYPE
+            )
             return self._extract_system_content(langfuse_prompt.prompt)
         except Exception:
             return None
 
     async def _fetch_existing_text_content(self, prompt_name: str) -> str | None:
         try:
-            langfuse_prompt = self._client.get_prompt(prompt_name)
+            langfuse_prompt = await asyncio.to_thread(
+                self._client.get_prompt, prompt_name
+            )
             return langfuse_prompt.prompt
         except Exception:
             return None
-
-    def get_compiled_system_prompt(self) -> tuple[str, dict]:
-        current_date = datetime.now().strftime("%d %B, %y")
-        if not self._langfuse_available:
-            return self._apply_template_vars(VERA_FALLBACK_SYSTEM_PROMPT, current_date), {"prompt_source": "fallback"}
-        try:
-            langfuse_prompt = self._client.get_prompt(PROMPT_NAME_VERA_SYSTEM, type=self.PROMPT_TYPE)
-            system_content = self._extract_system_content(langfuse_prompt.prompt)
-            compiled = self._apply_template_vars(system_content, current_date)
-            return compiled, {
-                "prompt_source": "langfuse",
-                "prompt_name": PROMPT_NAME_VERA_SYSTEM,
-                "prompt_version": langfuse_prompt.version,
-                "langfuse_prompt": langfuse_prompt,
-            }
-        except Exception as exc:
-            logger.warning("Failed to compile prompt from Langfuse, using fallback: %s", exc)
-            return self._apply_template_vars(VERA_FALLBACK_SYSTEM_PROMPT, current_date), {"prompt_source": "fallback"}
 
     def get_compiled_supervisor_prompt(self) -> tuple[str, dict]:
         current_date = datetime.now().strftime("%d %B, %y")
@@ -213,10 +194,3 @@ class PromptManager:
                 return msg.get("content", "")
         return ""
 
-    @staticmethod
-    def _build_fallback_template(system_content: str) -> ChatPromptTemplate:
-        return ChatPromptTemplate.from_messages([
-            ("system", system_content),
-            MessagesPlaceholder("chat_history"),
-            ("human", "{user_message}"),
-        ])

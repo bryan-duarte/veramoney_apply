@@ -9,7 +9,7 @@ from src.config import Settings
 from src.rag.document_configs import DOCUMENT_SOURCES
 from src.rag.loader import DocumentLoader
 from src.rag.retriever import KnowledgeRetriever
-from src.rag.schemas import RAGPipelineStatus
+from src.rag.schemas import PipelineStatus, RAGPipelineStatus
 from src.rag.splitter import split_documents
 from src.rag.vectorstore import ChromaVectorStoreManager
 
@@ -31,7 +31,7 @@ class RAGPipeline:
         self._document_loader = document_loader
         self._retriever: KnowledgeRetriever | None = None
         self._status = RAGPipelineStatus(
-            status="initializing",
+            status=PipelineStatus.INITIALIZING,
             document_count=0,
             chunk_count=0,
             errors=[],
@@ -49,7 +49,7 @@ class RAGPipeline:
 
     @property
     def is_ready(self) -> bool:
-        return self._status.status == "ready"
+        return self._status.status == PipelineStatus.READY
 
     @property
     def has_errors(self) -> bool:
@@ -90,7 +90,7 @@ class RAGPipeline:
         await self._vector_store_manager.initialize()
 
     async def _load_documents(self) -> None:
-        self._status.status = "loading"
+        self._status.status = PipelineStatus.LOADING
         loader = self._document_loader or DocumentLoader()
         all_chunks: list[Document] = []
         load_errors: list[str] = []
@@ -121,7 +121,7 @@ class RAGPipeline:
             logger.info("Indexing %d chunks into ChromaDB...", len(chunks))
             await self._vector_store_manager.add_documents(chunks)
 
-        self._status.status = "ready" if not errors else "partial"
+        self._status.status = PipelineStatus.READY if not errors else PipelineStatus.PARTIAL
         self._status.chunk_count = len(chunks)
         self._status.errors = errors
 
@@ -134,7 +134,7 @@ class RAGPipeline:
     def _set_cached_status(self) -> None:
         chunk_count = self._vector_store_manager.get_collection_count()
         self._status = RAGPipelineStatus(
-            status="ready",
+            status=PipelineStatus.READY,
             document_count=EXPECTED_DOCUMENT_COUNT,
             chunk_count=chunk_count,
             errors=[],

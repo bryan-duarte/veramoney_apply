@@ -51,6 +51,7 @@ https://www.loom.com/share/083197cb72294cec854b1b910caa5c6f
 - [Overview](#-overview)
 - [Features](#-features)
 - [Architecture](#️-architecture)
+- [Prompt Architecture](#-prompt-architecture)
 - [Quick Start](#-quick-start)
 - [Installation](#-installation)
 - [Configuration](#-configuration)
@@ -200,6 +201,97 @@ https://www.loom.com/share/083197cb72294cec854b1b910caa5c6f
 | **Vector Store** | ChromaDB | Self-hosted, Docker-friendly, metadata filtering, free (The best part) |
 | **Observability** | Langfuse v3 | LLM-native metrics, open-source, self-hostable (Much cheaper than Langsmith) |
 | **Streaming** | Server-Sent Events | Simpler than WebSocket, fits request-response pattern, perfect for a good ux in the chat frontend |
+
+---
+
+## 🎭 Prompt Architecture
+
+The multi-agent system uses a strict separation of responsibilities between the **Supervisor** and **Worker** prompts. This architecture ensures each prompt has a single, well-defined purpose with zero redundancy.
+
+### Responsibility Separation
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              SUPERVISOR PROMPT                               │
+│                                                                              │
+│  Owns:                                                                       │
+│  • ALL user-facing language (every word the user sees)                       │
+│  • Request routing to workers                                                │
+│  • Synthesizing structured results into natural language                     │
+│  • Crafting friendly error messages from worker error types                  │
+│  • Language detection and response language selection                        │
+│                                                                              │
+│  Never:                                                                      │
+│  • Calls external APIs                                                       │
+│  • Has domain-specific mappings (tickers, etc.)                              │
+│  • Returns structured data                                                   │
+│  • Shows error codes, JSON, or technical output                              │
+│                                                                              │
+│  Output: Natural language ONLY                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+            ┌───────────────────────┼───────────────────────┐
+            ▼                       ▼                       ▼
+┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
+│   WEATHER WORKER    │  │    STOCK WORKER     │  │  KNOWLEDGE WORKER   │
+│                     │  │                     │  │                     │
+│  Owns:              │  │  Owns:              │  │  Owns:              │
+│  • Tool calls       │  │  • Tool calls       │  │  • Tool calls       │
+│  • Data extraction  │  │  • Data extraction  │  │  • Data extraction  │
+│  • Ticker mapping   │  │  • Citations        │  │                     │
+│                     │  │                     │  │                     │
+│  Returns:           │  │  Returns:           │  │  Returns:           │
+│  Status + fields    │  │  Status + fields    │  │  Status + Sources   │
+│                     │  │                     │  │                     │
+│  On error returns:  │  │  On error returns:  │  │  On error returns:  │
+│  ErrorType + Input  │  │  ErrorType + Input  │  │  ErrorType          │
+│  (NOT full message) │  │  (NOT full message) │  │  (NOT full message) │
+└─────────────────────┘  └─────────────────────┘  └─────────────────────┘
+```
+
+### Worker Output Format
+
+Workers return MINIMAL structured data. The supervisor crafts ALL user-facing text.
+
+```
+SUCCESS:
+Status: success
+[Domain-specific fields only]
+
+ERROR:
+Status: error
+ErrorType: city_not_found | invalid_ticker | api_error
+Input: [what user provided]
+```
+
+**Example flow:**
+
+```
+Worker returns:
+  Status: error | ErrorType: city_not_found | Input: XYZ123
+
+Supervisor transforms to:
+  "I couldn't find weather for that location. Could you check the spelling?"
+```
+
+### Prompt File Locations
+
+| Prompt | File | Langfuse Name |
+|--------|------|---------------|
+| Supervisor | `src/prompts/system.py` | `vera-supervisor-prompt` |
+| Weather Worker | `src/prompts/workers.py` | `vera-weather-worker` |
+| Stock Worker | `src/prompts/workers.py` | `vera-stock-worker` |
+| Knowledge Worker | `src/prompts/workers.py` | `vera-knowledge-worker` |
+
+### Key Principle
+
+> **Workers return structured data. The supervisor owns ALL human language.**
+
+This separation ensures:
+- Zero redundancy between prompts
+- Clear debugging (which layer failed?)
+- Supervisor has full control over user experience
+- Workers can be optimized independently for accuracy
 
 ---
 

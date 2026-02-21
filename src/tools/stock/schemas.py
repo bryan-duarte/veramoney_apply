@@ -33,6 +33,6 @@ class StockOutput(BaseModel):
     change: str = Field(
         description="Price change from previous close with sign (e.g., '+2.34', '-1.50')"
     )
-    change_percent: str = Field(
-        description="Percentage change from previous close with sign (e.g., '+1.32%', '-0.85%')"
+    change_percent: float = Field(
+        description="Percentage change from previous close (e.g., 1.32, -0.85). Returns 0.0 when previous_close is 0"
     )

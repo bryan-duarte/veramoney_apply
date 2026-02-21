@@ -52,3 +52,8 @@ class WeatherOutput(BaseModel):
     wind_speed_kph: float = Field(description="Wind speed in kilometers per hour")
     visibility_km: float = Field(description="Visibility in kilometers")
     timestamp: int = Field(description="Unix timestamp of the weather data")
+
+
+class WeatherError(BaseModel):
+    error: str = Field(description="Error message describing what went wrong")
+    code: str | None = Field(default=None, description="Error code if available")

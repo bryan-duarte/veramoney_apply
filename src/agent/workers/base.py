@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict
 from src.agent.middleware.worker_logging import worker_logging_middleware
 from src.config import Settings
 
+
 if TYPE_CHECKING:
     from src.observability.prompts import PromptManager
 

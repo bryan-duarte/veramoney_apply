@@ -7,8 +7,9 @@ BACKOFF_MULTIPLIER = 2
 SUGGESTED_PROMPTS = [
     "What's the weather like in Montevideo, Uruguay?",
     "What is the current stock price of Apple (AAPL)?",
-    "How is the weather in New York and what's the MSFT stock price?",
-    "Compare the stock performance of TSLA and NVDA",
+    "Tell me about VeraMoney's company history",
+    "What are the fintech regulations in Uruguay?",
+    "Explain Uruguayan banking compliance requirements",
 ]
 
 ERROR_MESSAGE_UNAUTHORIZED = "Unable to connect to the service. Please contact support."

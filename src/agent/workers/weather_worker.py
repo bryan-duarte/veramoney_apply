@@ -7,50 +7,15 @@ from langchain.tools import tool
 
 from src.agent.workers.base import BaseWorkerFactory, WorkerConfig
 from src.config import Settings
+from src.prompts import WEATHER_WORKER_PROMPT
 from src.tools.weather.tool import get_weather
+
 
 if TYPE_CHECKING:
     from src.observability.prompts import PromptManager
 
 
 logger = logging.getLogger(__name__)
-
-WEATHER_WORKER_PROMPT = """You are a weather specialist for VeraMoney. Return structured data for the supervisor to synthesize.
-
-<instructions>
-1. Parse the location from the request (city name, handle ambiguity)
-2. Call get_weather with city (add country_code if ambiguous)
-3. Return a structured response with the data
-</instructions>
-
-<output_format>
-Location: [City, Country]
-Temperature: [TEMPERATURE]°C
-Conditions: [description]
-Humidity: [PERCENT]%
-Wind: [SPEED] km/h
-</output_format>
-
-<error_handling>
-- City not found: Return "Unable to find weather data for '[input]'. Suggest: [similar cities]"
-- API error: Return "Weather data temporarily unavailable for [city]."
-</error_handling>
-
-<examples>
-Input: "What's the weather in [CITY]?"
-→ Call get_weather("[CITY]")
-→ Return: "Location: [CITY], [COUNTRY] | Temperature: [TEMP]°C | Conditions: [CONDITION] | Humidity: [PERCENT]% | Wind: [SPEED] km/h"
-
-Input: "Weather in [CITY]"
-→ Call get_weather("[CITY]", "[COUNTRY_CODE]")
-→ Return: "Location: [CITY], [COUNTRY] | Temperature: [TEMP]°C | Conditions: [CONDITION] | Humidity: [PERCENT]% | Wind: [SPEED] km/h"
-
-Input: "[FOREIGN_LANGUAGE query for city]"
-→ Call get_weather("[CITY]", "[COUNTRY_CODE]")
-→ Return: "Location: [CITY], [COUNTRY] | Temperature: [TEMP]°C | Conditions: [CONDITION] | Humidity: [PERCENT]% | Wind: [SPEED] km/h"
-</examples>
-
-Current date: {{current_date}}"""
 
 
 def create_weather_worker(

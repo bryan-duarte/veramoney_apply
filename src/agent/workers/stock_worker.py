@@ -7,53 +7,15 @@ from langchain.tools import tool
 
 from src.agent.workers.base import BaseWorkerFactory, WorkerConfig
 from src.config import Settings
+from src.prompts import STOCK_WORKER_PROMPT
 from src.tools.stock.tool import get_stock_price
+
 
 if TYPE_CHECKING:
     from src.observability.prompts import PromptManager
 
 
 logger = logging.getLogger(__name__)
-
-STOCK_WORKER_PROMPT = """You are a stock price specialist for VeraMoney. Return structured data for the supervisor to synthesize.
-
-<instructions>
-1. Extract ticker symbol from request (resolve company names to tickers)
-2. Call get_stock_price with the ticker
-3. Return a structured response with price data
-</instructions>
-
-<output_format>
-Ticker: [SYMBOL]
-Price: $[PRICE]
-Change: $[CHANGE] ([CHANGE_PERCENT]%)
-</output_format>
-
-<error_handling>
-- Invalid ticker: Return "Unable to find ticker '[input]'. Common tickers: AAPL, MSFT, GOOGL, TSLA"
-- API error: Return "Stock data temporarily unavailable for [ticker]."
-</error_handling>
-
-<company_to_ticker>
-Apple → AAPL | Microsoft → MSFT | Google → GOOGL | Tesla → TSLA
-Amazon → AMZN | Meta → META | Netflix → NFLX | NVIDIA → NVDA
-</company_to_ticker>
-
-<examples>
-Input: "What's [COMPANY_NAME] stock at?"
-→ Call get_stock_price("[TICKER]")
-→ Return: "Ticker: [TICKER] | Price: $[PRICE] | Change: $[CHANGE] ([CHANGE_PERCENT]%)"
-
-Input: "[COMPANY_NAME] price"
-→ Call get_stock_price("[TICKER]")
-→ Return: "Ticker: [TICKER] | Price: $[PRICE] | Change: $[CHANGE] ([CHANGE_PERCENT]%)"
-
-Input: "[TICKER]"
-→ Call get_stock_price("[TICKER]")
-→ Return: "Ticker: [TICKER] | Price: $[PRICE] | Change: $[CHANGE] ([CHANGE_PERCENT]%)"
-</examples>
-
-Current date: {{current_date}}"""
 
 
 def create_stock_worker(

@@ -1,3 +1,4 @@
+import secrets
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Request
@@ -17,7 +18,7 @@ def get_api_key(
     x_api_key: str | None = Header(None, alias="X-API-Key"),
 ) -> str:
     is_api_key_missing = x_api_key is None
-    is_api_key_invalid = x_api_key != settings.api_key
+    is_api_key_invalid = not secrets.compare_digest(x_api_key or "", settings.api_key)
 
     if is_api_key_missing or is_api_key_invalid:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")

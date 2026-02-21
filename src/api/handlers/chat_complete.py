@@ -3,6 +3,7 @@ import logging
 from fastapi import HTTPException
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
+from src.agent.constants import ALL_WORKER_TOOLS
 from src.api.handlers.base import ChatHandlerBase
 from src.api.schemas import (
     ChatCompleteRequest,
@@ -10,7 +11,7 @@ from src.api.schemas import (
     ToolCall,
     WorkerToolCall,
 )
-from src.tools.constants import ALL_WORKER_TOOLS
+from src.utils.logging import sanitize_for_log
 
 
 logger = logging.getLogger(__name__)
@@ -52,11 +53,11 @@ class ChatCompleteHandler(ChatHandlerBase):
             langfuse_client = self.get_langfuse_client()
             if langfuse_handler and langfuse_client:
                 langfuse_client.flush()
-                logger.debug("Langfuse flushed session=%s", request.session_id)
+                logger.debug("Langfuse flushed session=%s", sanitize_for_log(request.session_id))
 
             logger.info(
                 "chat_complete session=%s response_len=%d worker_calls=%d",
-                request.session_id,
+                sanitize_for_log(request.session_id),
                 len(final_message.content) if final_message.content else 0,
                 len(worker_details) if worker_details else 0,
             )
@@ -69,7 +70,7 @@ class ChatCompleteHandler(ChatHandlerBase):
 
         except Exception as error:
             logger.exception(
-                "chat_complete_error session=%s error=%s", request.session_id, str(error)
+                "chat_complete_error session=%s error=%s", sanitize_for_log(request.session_id), str(error)
             )
             raise HTTPException(status_code=500, detail="Internal server error") from error
 

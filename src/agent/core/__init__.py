@@ -1,8 +1,5 @@
-from src.agent.core.prompts import (
-    SUPERVISOR_SYSTEM_PROMPT_FALLBACK,
-    VERA_FALLBACK_SYSTEM_PROMPT,
-)
+from src.agent.core.prompts import SUPERVISOR_SYSTEM_PROMPT_FALLBACK
 from src.agent.core.supervisor import SupervisorFactory
 
 
-__all__ = ["SUPERVISOR_SYSTEM_PROMPT_FALLBACK", "VERA_FALLBACK_SYSTEM_PROMPT", "SupervisorFactory"]
+__all__ = ["SUPERVISOR_SYSTEM_PROMPT_FALLBACK", "SupervisorFactory"]
