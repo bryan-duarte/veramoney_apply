@@ -918,3 +918,43 @@ curl -H "X-API-Key: your-secure-key" http://localhost:8000/chat
 [⬆ Back to Top](#veramoney-apply)
 
 </div>
+
+
+## Screenshoots
+
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/1824b988-5a2f-4312-bb9b-84a03809c437" />
+
+### Agents as a tool uses cases
+
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/5d43fd38-6dda-4d68-8dab-85fcef94314d" />
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/7e9a0c51-22b5-4569-8dd5-3916e32ea800" />
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/c168756b-1766-444f-ba60-59f6a201124b" />
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/52064891-3190-4bf2-a0c2-dd96d592a0ec" />
+
+### Langfuse selfhosted
+
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/eca5b0c6-7255-4813-b275-333474fffa6d" />
+
+
+### Datasets
+
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/bfb77eaf-e713-4f72-8d5a-2f8722733435" />
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/f429fed7-ad8a-47c4-9699-75ffd6598808" />
+
+### Prompts
+
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/5dcd2384-9c27-47db-b452-1dc04e305d44" />
+
+### Traces
+
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/758b54b3-3ae8-4ae4-8008-60749d1a1e19" />
+
+### Sessions
+
+<img width="1200" height="953" alt="image" src="https://github.com/user-attachments/assets/ecba7a0b-64cf-4f6f-9169-012e8b82f5d8" />
+
+
+
+
+
+
